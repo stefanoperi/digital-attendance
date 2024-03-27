@@ -1,22 +1,33 @@
 import cv2
-import numpy
 
-faceClassif = cv2.CascadeClassifier("frontalface_classifier.xml")
+cap = cv2.VideoCapture(0)
+if not cap.isOpened():
+    print("No se pudo abrir la camara")
+    exit()
 
-image = cv2.imread("oficina.jpeg")
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+side_face_classif = cv2.CascadeClassifier('profileface_classifier.xml')
+face_classif = cv2.CascadeClassifier("frontalface_classifier.xml")
 
-faces = faceClassif.detectMultiScale(gray,
-    scaleFactor=1.1,
-    minNeighbors=5,
-    minSize=(30, 30),
-    maxSize=(200, 200))
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
 
-print(faces)
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-for (x,y,w,h) in faces:
-    cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2)
+    faces = face_classif.detectMultiScale(gray, 1.3, 5)
+    for (x, y, w, h) in faces:
+        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
-cv2.imshow("image", image)
-cv2.waitKey(0)
+
+    side_faces = side_face_classif.detectMultiScale(gray, 1.3, 5)
+    for (x, y, w, h) in side_faces:
+        cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+
+    cv2.imshow('frame', frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
 cv2.destroyAllWindows()
