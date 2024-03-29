@@ -20,7 +20,7 @@ while True:
         cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
 
-    side_faces = side_face_classif.detectMultiScale(gray, 1.3, 5)
+    side_faces = side_face_classif.detectMultiScale(gray, 1.3, 3)
     for (x, y, w, h) in side_faces:
         cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
 
