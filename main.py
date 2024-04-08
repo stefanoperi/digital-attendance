@@ -1,7 +1,7 @@
 import cv2
 import os
 import face_recognition
-from images import face_extractor as extractor
+from images import face_utils as utils
 
 
 # Leyendo video
@@ -12,9 +12,9 @@ def main():
             print("Nueva carpeta: faces")
 
     answer = input("Quieres agregar nuevas fotos? [si/no] ").lower()
-    face_manager = extractor.FaceManager()
+    face_manager = utils.FaceManager()
     if answer == "si":
-        capturer = extractor.PhotoCapturer()
+        capturer = utils.PhotoCapturer()
         new_photos = capturer.capture_photo()
 
         if new_photos:
@@ -28,7 +28,7 @@ def main():
     faces_path = "images/faces"
     encodings_dict = face_manager.encode_faces(faces_path)
 
-    face_detector = extractor.FaceDetector()
+    face_detector = utils.FaceDetector()
     face_detector.live_comparison(encodings_dict)
 
 if __name__ == "__main__":
