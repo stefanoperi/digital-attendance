@@ -1,16 +1,69 @@
 import cv2
 import os
-
+import face_recognition
+import time
 
 class FaceDetector:
     def __init__(self):
-        self.face_cascade = cv2.CascadeClassifier("frontalface_classifier.xml")
+        self.face_classifier = cv2.CascadeClassifier("frontalface_classifier.xml")
 
     def detect_faces(self, image):
         # Detecta caras en una imagen y devuelve las coordenadas de los rectángulos que las encierran
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        faces = self.face_cascade.detectMultiScale(gray_image, 1.3, 5)
+        faces = self.face_classifier.detectMultiScale(gray_image, 1.3, 5)
         return faces
+    
+    def live_comparison(self, encodings_dict):
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        start_time = time.time()  # Get start time
+        num_frames = 0 
+
+        while True:
+            ret, frame = cap.read()
+            if ret == False:
+                break
+            frame = cv2.flip(frame, 1)
+            orig = frame.copy()
+            faces = self.detect_faces(frame)
+
+            for (x, y, w, h) in faces:
+                #Codifica la ubicacion de la cara encontrada y la compara
+                face = orig[y:y + h, x:x + w]
+                face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
+                actual_encoding = face_recognition.face_encodings(face, known_face_locations = [(0, w, h, 0)])[0]
+                
+                for key in encodings_dict.keys():
+                    result = face_recognition.compare_faces(encodings_dict[key], actual_encoding)
+                    if True in result:
+                        name = key
+                        color = (125, 220, 0) 
+                        break
+                    else:
+                        name = "Desconocido"
+                        color = (50, 50 , 255)
+                
+                cv2.rectangle(frame, (x, y + h), (x + w, y + h + 30), color, -1)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
+                cv2.putText(frame, name, (x, y + h + 25), 2, 1, (255, 255 , 255), 2, cv2.LINE_AA)
+            
+            cv2.imshow("Frame", frame)
+            num_frames += 1  # Increment frame counter
+    
+            # Calculate elapsed time
+            elapsed_time = time.time() - start_time
+            # Calculate fps
+            fps = num_frames / elapsed_time
+            # Display fps
+            print(f"FPS: {fps:.2f}")
+
+
+            k = cv2.waitKey(1) & 0xFF
+            #Si toca la tecla ESC
+            if k == 27:
+                break
+
+        cap.release()
+        cv2.destroyAllWindows()
 
 class PhotoCapturer:
     def __init__(self):
@@ -78,7 +131,7 @@ class FaceManager:
         except Exception as e:
             print(f"Error al guardar las imagenes: {e}")
     
-    def encode_faces(faces_path):
+    def encode_faces(self, faces_path):
         encodings_dict = {}
         # Iterar sobre cada carpeta de los usuarios
 
@@ -110,6 +163,7 @@ class FaceManager:
 - QUE NO GUARDE LAS CARAS CON EL RECTANGULO VERDE
 - SACAR MUCHAS FOTOS SOLO SI SE CUMPLEN CIERTAS CONDICIONES FOTOGRAFICAS
 - MEJORAR PARA QUE TENGA EL CLASIFICADOR DE CARAS DE PERFIL
+- ARREGLAR GUARDADO DE NOMBRES DE CARAS ORDEN DE NUMEROS ESTA MAL A VECES
 
 - ADAPTAR f_recognition.py A extracting_faces.py
 """ 
