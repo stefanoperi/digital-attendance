@@ -5,7 +5,7 @@ import time
 
 class FaceDetector:
     def __init__(self):
-        self.face_classifier = cv2.CascadeClassifier("frontalface_classifier.xml")
+        self.face_classifier = cv2.CascadeClassifier("classifiers/frontalface_classifier.xml")
 
     def detect_faces(self, image):
         # Detecta caras en una imagen y devuelve las coordenadas de los rectángulos que las encierran
@@ -88,12 +88,14 @@ class PhotoCapturer:
                 cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
             cv2.imshow("frame", frame)
-            key = cv2.waitKey(1)
+          
 
             captured_photos.append(frame.copy())
             print("Foto tomada\n")
-            time.sleep(1)
-            if key == ord("q"):
+            
+            # Si toca "ESC", cerrar 
+            key = cv2.waitKey(1)
+            if key == 27:  
                 break
 
         cap.release()
@@ -119,11 +121,12 @@ class FaceManager:
                 print(f"Ya existe un directorio con el nombre {user_folder}")
                 
             count = len(os.listdir(folder_path)) + 1
-            for i, image in enumerate(images):
+            for image in images:
                 face_detected = self.face_detector.detect_faces(image)
                 for (x, y ,w , h) in face_detected:
                     face_area = image[y:y + h, x:x + w]
-                    cv2.imwrite(os.path.join(folder_path, f"{user_folder}_{count + i}.jpg"), face_area)
+                    cv2.imwrite(os.path.join(folder_path, f"{user_folder}_{count}.jpg"), face_area)
+                    count += 1
                     print("Imagen de cara guardada")
                     
         except Exception as e:
