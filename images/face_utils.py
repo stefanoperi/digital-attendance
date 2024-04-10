@@ -10,7 +10,7 @@ class FaceDetector:
     def detect_faces(self, image):
         # Detecta caras en una imagen y devuelve las coordenadas de los rectángulos que las encierran
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        faces = self.face_classifier.detectMultiScale(gray_image, 1.3, 5)
+        faces = self.face_classifier.detectMultiScale(gray_image, 1.1, 5)
         return faces
     
     def live_comparison(self, encodings_dict):
@@ -76,13 +76,11 @@ class PhotoCapturer:
         if not cap.isOpened():
             raise RuntimeError("Error: No se pudo abrir la cámara")
 
-
         captured_photos = []
         while True:
             ret, frame = cap.read()
             if not ret:
                 raise RuntimeError("Error al capturar el frame")
-
 
             faces = self.face_detector.detect_faces(frame)
 
@@ -92,10 +90,10 @@ class PhotoCapturer:
             cv2.imshow("frame", frame)
             key = cv2.waitKey(1)
 
-            if key == ord(" "):
-                captured_photos.append(frame.copy())
-                print("Foto tomada\n")
-            elif key == ord("q"):
+            captured_photos.append(frame.copy())
+            print("Foto tomada\n")
+            time.sleep(1)
+            if key == ord("q"):
                 break
 
         cap.release()
@@ -157,3 +155,10 @@ class FaceManager:
         return encodings_dict
     
 
+"""
+Cambios evidentes a realizar:
+    - Optimizar codigo (Probando otras librerias de deteccion)
+    - Solucionar enumerado de caras guardadas
+    - Agregar detector de caras de perfil
+    - Agregar mas posibilidades de eleccion del usuario
+"""
