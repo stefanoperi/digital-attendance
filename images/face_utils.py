@@ -135,7 +135,7 @@ class FaceManager:
     def encode_faces(self, faces_path):
         encodings_dict = {}
         # Iterar sobre cada carpeta de los usuarios
-
+        count = 0
         for user_folder in os.listdir(faces_path):
             user_faces_path = os.path.join(faces_path, user_folder)
 
@@ -150,6 +150,9 @@ class FaceManager:
         
                 f_coding = face_recognition.face_encodings(image, known_face_locations = [(0, 150, 150, 0)])[0]
                 person_encodings.append(f_coding)
+                print(f"Cara codificada numero: {count}")
+                count += 1
+                
 
             # Agregar las codificaciones faciales de la persona al diccionario
             if person_encodings:
@@ -160,8 +163,14 @@ class FaceManager:
 
 """
 Cambios evidentes a realizar:
-    - Optimizar codigo (Probando otras librerias de deteccion)
-    - Solucionar enumerado de caras guardadas
+    - Optimizar codigo (Probar otras librerias de deteccion)
+        Al tomar muchas caras es mas preciso en la deteccion de tiempo real pero 
+        tarda mucho mas la encodificacion de tantas caras, quizas es mejor que ya queden guardadas las codificaciones
+        o buscar otra solucion
+        Ademas, la deteccion en tiempo real baja mucho los fps [Confirmar si el problema es la libreria]
+    
+    - Comentar mejor el codigo :)
+    - Agregar la parte de la base de datos con gspread
     - Agregar detector de caras de perfil
     - Agregar mas posibilidades de eleccion del usuario
 """
