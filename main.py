@@ -4,7 +4,7 @@ import face_recognition
 from images import face_utils as utils
 
 
-# Leyendo video
+
 def main(): 
 
     if not os.path.exists("images/faces"):

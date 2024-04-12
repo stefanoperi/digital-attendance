@@ -15,7 +15,7 @@ class FaceDetector:
     
     def live_comparison(self, encodings_dict):
         cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-        start_time = time.time()  # Get start time
+        start_time = time.time()  # Empieza a tomar el tiempo
         num_frames = 0 
 
         while True:
@@ -27,10 +27,10 @@ class FaceDetector:
             faces = self.detect_faces(frame)
 
             for (x, y, w, h) in faces:
-                #Codifica la ubicacion de la cara encontrada y la compara
+                # Codifica la ubicacion de la cara detectada en tiempo real
                 face = orig[y:y + h, x:x + w]
-                face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
-                actual_encoding = face_recognition.face_encodings(face, known_face_locations = [(0, w, h, 0)])[0]
+                face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB) 
+                actual_encoding = face_recognition.face_encodings(face, known_face_locations = [(0, w, h, 0)])[0] 
                 
                 for key in encodings_dict.keys():
                     result = face_recognition.compare_faces(encodings_dict[key], actual_encoding)
@@ -47,13 +47,11 @@ class FaceDetector:
                 cv2.putText(frame, name, (x, y + h + 25), 2, 1, (255, 255 , 255), 2, cv2.LINE_AA)
             
             cv2.imshow("Frame", frame)
-            num_frames += 1  # Increment frame counter
+            num_frames += 1  #
     
-            # Calculate elapsed time
+    
             elapsed_time = time.time() - start_time
-            # Calculate fps
-            fps = num_frames / elapsed_time
-            # Display fps
+            fps = num_frames / elapsed_time  # Calcula FPS
             print(f"FPS: {fps:.2f}")
 
 
@@ -85,14 +83,12 @@ class PhotoCapturer:
             faces = self.face_detector.detect_faces(frame)
 
             for (x, y, w, h) in faces:
-                cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                cv2.rectangle(frame,(x, y), (x+w, y+h), (0, 255, 0), 2)
+                captured_photos.append(frame.copy())
+                print("Foto tomada\n")
 
             cv2.imshow("frame", frame)
           
-
-            captured_photos.append(frame.copy())
-            print("Foto tomada\n")
-            
             # Si toca "ESC", cerrar 
             key = cv2.waitKey(1)
             if key == 27:  
@@ -168,7 +164,8 @@ Cambios evidentes a realizar:
         tarda mucho mas la encodificacion de tantas caras, quizas es mejor que ya queden guardadas las codificaciones
         o buscar otra solucion
         Ademas, la deteccion en tiempo real baja mucho los fps [Confirmar si el problema es la libreria]
-    
+
+    - Usar funciones asincronicas para optimizar el codigo    
     - Comentar mejor el codigo :)
     - Agregar la parte de la base de datos con gspread
     - Agregar detector de caras de perfil
