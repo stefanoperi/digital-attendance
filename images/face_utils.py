@@ -15,12 +15,15 @@ class FaceDetector:
     
     def live_comparison(self, encodings_dict):
         cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        cap.set(3, 640)
+        cap.set(4, 480)
+
         start_time = time.time()  # Empieza a tomar el tiempo
         num_frames = 0 
 
         while True:
-            ret, frame = cap.read()
-            if ret == False:
+            success, frame = cap.read()
+            if success == False:
                 break
             frame = cv2.flip(frame, 1)
             orig = frame.copy()
@@ -71,27 +74,38 @@ class PhotoCapturer:
     def capture_photo(self):
         # Captura fotos desde la cámara con el display del detector de caras
         cap = cv2.VideoCapture(0)
+        cap.set(3, 640)
+        cap.set(4, 480)
+
         if not cap.isOpened():
             raise RuntimeError("Error: No se pudo abrir la cámara")
 
         captured_photos = []
+        photo_count = 0
         while True:
-            ret, frame = cap.read()
-            if not ret:
+            success, frame = cap.read()
+            if not success:
                 raise RuntimeError("Error al capturar el frame")
 
+            gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            brightness = cv2.mean(gray_frame)[0]
             faces = self.face_detector.detect_faces(frame)
-
+          
             for (x, y, w, h) in faces:
                 cv2.rectangle(frame,(x, y), (x+w, y+h), (0, 255, 0), 2)
-                captured_photos.append(frame.copy())
-                print("Foto tomada\n")
+                key = cv2.waitKey(1)
+                if brightness >= 125 and key == 32: # Si toca "SPACE BAR" e Iluminacion >= 100
+                    captured_photos.append(frame.copy())
+                    photo_count += 1
+                    print("Foto tomada\n")
+                elif brightness < 125:
+                    print("Falta iluminacion\n")
 
             cv2.imshow("frame", frame)
           
             # Si toca "ESC", cerrar 
             key = cv2.waitKey(1)
-            if key == 27:  
+            if key == 27 or photo_count >= 10:  
                 break
 
         cap.release()
@@ -165,6 +179,7 @@ Cambios evidentes a realizar:
         o buscar otra solucion
         Ademas, la deteccion en tiempo real baja mucho los fps [Confirmar si el problema es la libreria]
 
+    - Dejar guardado codificaciones en una carpeta
     - Usar funciones asincronicas para optimizar el codigo    
     - Comentar mejor el codigo :)
     - Agregar la parte de la base de datos con gspread
