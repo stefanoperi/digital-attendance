@@ -15,14 +15,13 @@ class FaceDetector:
     
     def live_comparison(self, encodings_dict):
         cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-        cap.set(3, 640)
-        cap.set(4, 480)
-
+   
         start_time = time.time()  # Empieza a tomar el tiempo
         num_frames = 0 
 
         while True:
             success, frame = cap.read()
+            frame = cv2.resize(frame, (640, 480))  
             if success == False:
                 break
             frame = cv2.flip(frame, 1)
@@ -35,16 +34,16 @@ class FaceDetector:
                 face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB) 
                 actual_encoding = face_recognition.face_encodings(face, known_face_locations = [(0, w, h, 0)])[0] 
                 
+                name = "Desconocido"
+                color = (50, 50 , 255)
+                
                 for key in encodings_dict.keys():
                     result = face_recognition.compare_faces(encodings_dict[key], actual_encoding)
                     if True in result:
                         name = key
                         color = (125, 220, 0) 
                         break
-                    else:
-                        name = "Desconocido"
-                        color = (50, 50 , 255)
-                
+
                 cv2.rectangle(frame, (x, y + h), (x + w, y + h + 30), color, -1)
                 cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
                 cv2.putText(frame, name, (x, y + h + 25), 2, 1, (255, 255 , 255), 2, cv2.LINE_AA)
@@ -74,9 +73,6 @@ class PhotoCapturer:
     def capture_photo(self):
         # Captura fotos desde la cámara con el display del detector de caras
         cap = cv2.VideoCapture(0)
-        cap.set(3, 640)
-        cap.set(4, 480)
-
         if not cap.isOpened():
             raise RuntimeError("Error: No se pudo abrir la cámara")
 
@@ -84,6 +80,7 @@ class PhotoCapturer:
         photo_count = 0
         while True:
             success, frame = cap.read()
+            frame = cv2.resize(frame, (640, 480))  
             if not success:
                 raise RuntimeError("Error al capturar el frame")
 
@@ -94,12 +91,12 @@ class PhotoCapturer:
             for (x, y, w, h) in faces:
                 cv2.rectangle(frame,(x, y), (x+w, y+h), (0, 255, 0), 2)
                 key = cv2.waitKey(1)
-                if brightness >= 125 and key == 32: # Si toca "SPACE BAR" e Iluminacion >= 100
+                if brightness >= 120 and key == 32: # Si toca "SPACE BAR" e Iluminacion >= 100
                     captured_photos.append(frame.copy())
                     photo_count += 1
                     print("Foto tomada\n")
                 elif brightness < 125:
-                    print("Falta iluminacion\n")
+                    print(f"Iluminacion: {brightness:.2f} / 120 \n")
 
             cv2.imshow("frame", frame)
           
