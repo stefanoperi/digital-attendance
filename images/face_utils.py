@@ -49,13 +49,12 @@ class FaceDetector:
                 cv2.putText(frame, name, (x, y + h + 25), 2, 1, (255, 255 , 255), 2, cv2.LINE_AA)
             
             cv2.imshow("Frame", frame)
-            num_frames += 1  #
-    
     
             elapsed_time = time.time() - start_time
             fps = num_frames / elapsed_time  # Calcula FPS
             print(f"FPS: {fps:.2f}")
 
+            num_frames += 1  
 
             k = cv2.waitKey(1) & 0xFF
             #Si toca la tecla ESC
@@ -95,14 +94,13 @@ class PhotoCapturer:
                     captured_photos.append(frame.copy())
                     photo_count += 1
                     print("Foto tomada\n")
-                elif brightness < 125:
-                    print(f"Iluminacion: {brightness:.2f} / 120 \n")
+                print(f"Iluminacion: {brightness:.2f} / 120 \n")
 
             cv2.imshow("frame", frame)
           
             # Si toca "ESC", cerrar 
             key = cv2.waitKey(1)
-            if key == 27 or photo_count >= 10:  
+            if key == 27: 
                 break
 
         cap.release()
@@ -175,11 +173,18 @@ Cambios evidentes a realizar:
         tarda mucho mas la encodificacion de tantas caras, quizas es mejor que ya queden guardadas las codificaciones
         o buscar otra solucion
         Ademas, la deteccion en tiempo real baja mucho los fps [Confirmar si el problema es la libreria]
-
+        
+    - Acelerar gpu con OpenCl
     - Dejar guardado codificaciones en una carpeta
-    - Usar funciones asincronicas para optimizar el codigo    
     - Comentar mejor el codigo :)
     - Agregar la parte de la base de datos con gspread
     - Agregar detector de caras de perfil
     - Agregar mas posibilidades de eleccion del usuario
+"""
+
+""" 
+Notas:
+    La precision de la deteccion efectivamente mejora al haber mas fotos de cada persona
+    La bajada de fps radica sobre todo en tener q codificar y comparar en tiempo real las caras entrantes
+    
 """
