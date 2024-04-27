@@ -1,9 +1,8 @@
 import cv2
 import os
-import face_recognition
+import face_recognition 
 from images import face_utils as utils
-from images import db_manager
-
+from images import db_manager as db_manager_module
 
 
 def main(): 
@@ -38,7 +37,7 @@ def main():
         answer = input("¿Desea guardar las codificaciones en la base de datos? [si/no]: ").lower()
         
         if answer == "si":
-            db_manager = db_manager.DatabaseManager("encodings.db")
+            db_manager = db_manager_module.DatabaseManager("encodings.db")
             db_manager.connect()
             db_manager.create_table()
 
@@ -52,8 +51,6 @@ def main():
             break
 
     
-
-
 
 if __name__ == "__main__":
     main()
