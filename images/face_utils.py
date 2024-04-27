@@ -37,7 +37,8 @@ class FaceDetector:
                 name = "Desconocido"
                 color = (50, 50 , 255)
                 
-                for key in encodings_dict.keys():
+                # Compara codificaciones de cara detectada con la lista de codificaciones por cada persona en la base de datos
+                for key in encodings_dict:
                     result = face_recognition.compare_faces(encodings_dict[key], actual_encoding)
                     if True in result:
                         name = key
@@ -159,7 +160,7 @@ class FaceManager:
                 count += 1
                 
 
-            # Agregar las codificaciones faciales de la persona al diccionario
+            # Agregar la lista de codificaciones faciales de la persona al diccionario
             if person_encodings:
                 encodings_dict[user_folder.split(".")[0]] = person_encodings
         
@@ -168,23 +169,21 @@ class FaceManager:
 
 """
 Cambios evidentes a realizar:
-    - Optimizar codigo (Probar otras librerias de deteccion)
-        Al tomar muchas caras es mas preciso en la deteccion de tiempo real pero 
-        tarda mucho mas la encodificacion de tantas caras, quizas es mejor que ya queden guardadas las codificaciones
-        o buscar otra solucion
-        Ademas, la deteccion en tiempo real baja mucho los fps [Confirmar si el problema es la libreria]
-        
+    - Guardar las codificaciones de las personas conocidas en base de datos
+    - Agregar las graphics de la asistencia digital 
+    - Esperar X cantidad de segundos y ahi enviar una orden la google sheets
+        para confirmar que la persona detectada sea esa 
+    - Agregar la parte de la asistencia digital con gspread
+ 
     - Acelerar gpu con OpenCl
-    - Dejar guardado codificaciones en una carpeta
     - Comentar mejor el codigo :)
-    - Agregar la parte de la base de datos con gspread
     - Agregar detector de caras de perfil
-    - Agregar mas posibilidades de eleccion del usuario
+
 """
 
 """ 
 Notas:
     La precision de la deteccion efectivamente mejora al haber mas fotos de cada persona
     La bajada de fps radica sobre todo en tener q codificar y comparar en tiempo real las caras entrantes
-    
+
 """
