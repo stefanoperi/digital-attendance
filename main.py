@@ -2,6 +2,7 @@ import cv2
 import os
 import face_recognition 
 import numpy as np
+import shutil 
 from images import face_utils as utils
 from images import db_manager as db_module
 
@@ -39,24 +40,28 @@ def main():
 
     # Guarda las codificaciones en la base de datos para un rendimiento mas eficiente
     answer = None
-    while answer != "no":
-        answer = input("¿Desea guardar las codificaciones en la base de datos? [si/no]: ").lower()
-        
-        if answer == "si":
-            db_manager.create_table()
+    if new_photos:
+        while answer != "no":
+            answer = input("¿Desea guardar las codificaciones en la base de datos? [si/no]: ").lower()
+            
+            if answer == "si":
+                db_manager.create_table()
 
-            # Insertar encodings en la base de datos
-            for username, encodings in new_encodings.items():
-                for encoding in encodings:
-                    db_manager.insert_encoding(username, encoding.tobytes())
+                # Insertar encodings en la base de datos
+                for username, encodings in new_encodings.items():
+                    for encoding in encodings:
+                        db_manager.insert_encoding(username, encoding.tobytes())
 
-            db_manager.close()
-            print("Encodings guardados exitosamente en la base de datos.")
-        
+                db_manager.close()
+                print("Encodings guardados exitosamente en la base de datos.")
+                break
+
         try: 
-            os.removedirs(f"{face_manager.faces_folder}/{str(username)}")
+            shutil.rmtree(f"{face_manager.faces_folder}/{str(username)}")
+            return
         except OSError as e:
             print(f"Error al eliminar la carpeta: {e}")
+    
 
     
 
