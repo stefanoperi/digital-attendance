@@ -3,6 +3,7 @@ import os
 import face_recognition
 import time
 
+
 class FaceDetector:
     def __init__(self):
         self.face_classifier = cv2.CascadeClassifier("classifiers/frontalface_classifier.xml")
@@ -68,7 +69,6 @@ class FaceDetector:
 class PhotoCapturer:
     def __init__(self):
         self.face_detector = FaceDetector()
-        self.images_path = "images/input_images"
 
     def capture_photo(self):
         # Captura fotos desde la cámara con el display del detector de caras
@@ -118,6 +118,8 @@ class FaceManager:
 
     def save_faces(self, user_folder, images):    
         # Guarda las imágenes de las caras en una carpeta asignada al usuario capturado    
+
+        # Path de la carpeta donde se guardarán las imágenes de caras del usuario
         folder_path = os.path.join(self.faces_folder, user_folder)
         try:
             if not os.path.exists(folder_path):
@@ -127,6 +129,7 @@ class FaceManager:
                 print(f"Ya existe un directorio con el nombre {user_folder}")
                 
             count = len(os.listdir(folder_path)) + 1
+            # Itera sobre imagenes y guarda la seccion de la cara de cada una
             for image in images:
                 face_detected = self.face_detector.detect_faces(image)
                 for (x, y ,w , h) in face_detected:
