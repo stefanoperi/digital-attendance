@@ -20,6 +20,8 @@ def main():
     db_manager.connect()
   
     new_encodings = {} 
+    new_photos = {}
+
     answer = None
     while answer != "no":
         answer = input("Quieres agregar nuevas fotos? [si/no] ").lower()
@@ -33,11 +35,12 @@ def main():
                 face_manager.save_faces(username, new_photos)
                 new_encodings = face_manager.encode_faces(faces_path)
             break
-     
+    
+    db_manager.create_table()
     mixed_encodings = db_manager.mix_encodings(new_encodings)
     face_detector = utils.FaceDetector()
     face_detector.live_comparison(mixed_encodings)
-
+ 
     # Guarda las codificaciones en la base de datos para un rendimiento mas eficiente
     answer = None
     if new_photos:
