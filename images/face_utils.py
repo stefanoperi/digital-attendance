@@ -172,7 +172,6 @@ class FaceManager:
 
 """
 Cambios evidentes a realizar:
-    - Guardar las codificaciones de las personas conocidas en base de datos
     - Agregar las graphics de la asistencia digital 
     - Esperar X cantidad de segundos y ahi enviar una orden la google sheets
         para confirmar que la persona detectada sea esa 
@@ -184,8 +183,9 @@ Cambios evidentes a realizar:
 
 """
 
-""" 
+"""
 Notas:
+    Usar gspread implicara tener WiFi a la hora de presentar el proyecto
     La precision de la deteccion efectivamente mejora al haber mas fotos de cada persona
     La bajada de fps radica sobre todo en tener q codificar y comparar en tiempo real las caras entrantes
 

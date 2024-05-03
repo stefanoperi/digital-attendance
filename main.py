@@ -3,6 +3,7 @@ import os
 import face_recognition 
 import numpy as np
 import shutil 
+
 from images import face_utils as utils
 from images import db_manager as db_module
 
@@ -41,6 +42,7 @@ def main():
     face_detector = utils.FaceDetector()
     face_detector.live_comparison(mixed_encodings)
  
+
     # Guarda las codificaciones en la base de datos para un rendimiento mas eficiente
     answer = None
     if new_photos:
