@@ -1,12 +1,8 @@
-import cv2
 import os
-import face_recognition 
-import numpy as np
 import shutil 
-
 from images import face_utils as utils
 from images import db_manager as db_module
-
+from images import spreadsheet_manager as sheet_manager
 
 def main(): 
 
@@ -20,11 +16,16 @@ def main():
     db_manager = db_module.DatabaseManager("encodings.db")
     db_manager.connect()
   
-    new_encodings = {} 
-    new_photos = {}
+    student_encodings = {} 
+    new_photos = None
+    student = None
+    
+    worksheets_manager = sheet_manager.GoogleSheetManager('Toma de Asistencia')
+    worksheet_names = worksheets_manager.read_worksheet_names() # Obtener nombre de cursos
+    grade = get_valid_input(worksheet_names, "Escribe el grado al que se le tomara asistencia (Ej: 6to A): ")
 
     answer = None
-    while answer != "no":
+    while True:
         answer = input("Quieres agregar nuevas fotos? [si/no] ").lower()
 
         if answer == "si":
@@ -32,43 +33,66 @@ def main():
             new_photos = capturer.capture_photo()
 
             if new_photos:
-                username = input("Escribe el nombre de la persona capturada para crearle un directorio: ").capitalize()
-                face_manager.save_faces(username, new_photos)
-                new_encodings = face_manager.encode_faces(faces_path)
+               full_name = input("Escribe el nombre completo de la persona capturada: ").strip().title()
+               student_id = input("Escribe el numero de DNI de la persona capturada: ")
+               student_grade = get_valid_input(worksheet_names, "Escribe el grado de la persona capturada (Ej: 6to A): ") 
+
+               student = Student(student_id=student_id, full_name=full_name, grade=student_grade)
+
+               face_manager.save_faces(student, new_photos)
+               student_encodings = face_manager.encode_faces(faces_path)
+            break
+
+        elif answer == "no":
             break
     
     db_manager.create_table()
-    mixed_encodings = db_manager.mix_encodings(new_encodings)
+    mixed_encodings = db_manager.mix_encodings(student_encodings)
+    
     face_detector = utils.FaceDetector()
     face_detector.live_comparison(mixed_encodings)
- 
-
-    # Guarda las codificaciones en la base de datos para un rendimiento mas eficiente
+    
+    # Guarda los datos del estudiante en la base de datos para un rendimiento mas eficiente
     answer = None
-    if new_photos:
-        while answer != "no":
-            answer = input("¿Desea guardar las codificaciones en la base de datos? [si/no]: ").lower()
+    if student_encodings:
+        while True:
+            answer = input("¿Desea guardar los datos de la persona en la base de datos? [si/no]: ").lower()
             
             if answer == "si":
                 db_manager.create_table()
 
                 # Insertar encodings en la base de datos
-                for username, encodings in new_encodings.items():
+                for person, encodings in student_encodings.items():
+                    print(f"Nombre: {person}, Encoding: {encodings}")
                     for encoding in encodings:
-                        db_manager.insert_encoding(username, encoding.tobytes())
+                        db_manager.insert_encoding(student, encoding.tobytes())
 
                 db_manager.close()
-                print("Encodings guardados exitosamente en la base de datos.")
+                print("Datos guardados exitosamente en la base de datos.")
+                break
+
+            elif answer == "no":
                 break
 
         try: 
-            shutil.rmtree(f"{face_manager.faces_folder}/{str(username)}")
+            shutil.rmtree(f"{face_manager.faces_folder}/{str(student.full_name)}")
             return
         except OSError as e:
             print(f"Error al eliminar la carpeta: {e}")
     
+class Student:
+    def __init__(self, student_id, full_name, grade):
+        self.student_id = student_id
+        self.full_name = full_name
+        self.grade = grade
 
-    
+def get_valid_input(options, prompt):
+    while True:
+        user_input = input(prompt).strip()
+        if user_input in options:
+            return user_input
+        else:
+            print(f"La opción '{user_input}' no es válida. Por favor, intenta nuevamente.")
 
 if __name__ == "__main__":
     main()

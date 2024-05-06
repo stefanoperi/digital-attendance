@@ -6,7 +6,7 @@ import time
 
 class FaceDetector:
     def __init__(self):
-        self.face_classifier = cv2.CascadeClassifier("classifiers/frontalface_classifier.xml")
+        self.face_classifier = cv2.CascadeClassifier("./classifiers/frontalface_classifier.xml")
 
     def detect_faces(self, image):
         # Detecta caras en una imagen y devuelve las coordenadas de los rectángulos que las encierran
@@ -15,13 +15,18 @@ class FaceDetector:
         return faces
     
     def live_comparison(self, encodings_dict):
-        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        cap = cv2.VideoCapture(0)
+        # cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
    
         start_time = time.time()  # Empieza a tomar el tiempo
         num_frames = 0 
 
         while True:
             success, frame = cap.read()
+            if frame is None:
+                print(f"operation successful: {success}")
+                print("could not read camera")
+                continue
             frame = cv2.resize(frame, (640, 480))  
             if success == False:
                 break
@@ -95,7 +100,7 @@ class PhotoCapturer:
                     captured_photos.append(frame.copy())
                     photo_count += 1
                     print("Foto tomada\n")
-                print(f"Iluminacion: {brightness:.2f} / 120 \n")
+                print(f"Iluminacion: {brightness:.2f}  / 120 \n")
 
             cv2.imshow("frame", frame)
           
@@ -116,17 +121,17 @@ class FaceManager:
         self.face_detector = FaceDetector()
         self.faces_folder = "images/faces"
 
-    def save_faces(self, user_folder, images):    
+    def save_faces(self, student, images):    
         # Guarda las imágenes de las caras en una carpeta asignada al usuario capturado    
 
         # Path de la carpeta donde se guardarán las imágenes de caras del usuario
-        folder_path = os.path.join(self.faces_folder, user_folder)
+        folder_path = os.path.join(self.faces_folder, student.full_name)
         try:
             if not os.path.exists(folder_path):
                 os.makedirs(folder_path)
-                print(f"Nueva carpeta creada: {user_folder}")
+                print(f"Nueva carpeta creada: {student.full_name}")
             else:
-                print(f"Ya existe un directorio con el nombre {user_folder}")
+                print(f"Ya existe un directorio con el nombre {student.full_name}")
                 
             count = len(os.listdir(folder_path)) + 1
             # Itera sobre imagenes y guarda la seccion de la cara de cada una
@@ -134,7 +139,7 @@ class FaceManager:
                 face_detected = self.face_detector.detect_faces(image)
                 for (x, y ,w , h) in face_detected:
                     face_area = image[y:y + h, x:x + w]
-                    cv2.imwrite(os.path.join(folder_path, f"{user_folder}_{count}.jpg"), face_area)
+                    cv2.imwrite(os.path.join(folder_path, f"{student.full_name}_{count}.jpg"), face_area)
                     count += 1
                     print("Imagen de cara guardada")
                     
@@ -172,6 +177,7 @@ class FaceManager:
 
 """
 Cambios evidentes a realizar:
+    - Descentralizar el main.py
     - Agregar las graphics de la asistencia digital 
     - Esperar X cantidad de segundos y ahi enviar una orden la google sheets
         para confirmar que la persona detectada sea esa 

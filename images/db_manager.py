@@ -13,18 +13,20 @@ class DatabaseManager:
     def create_table(self):
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS encodings (
                                 id INTEGER PRIMARY KEY,
-                                username TEXT NOT NULL,
+                                student_id TEXT NOT NULL, 
+                                full_name TEXT NOT NULL,
+                                grade TEXT NOT NULL,
                                 encoding TEXT NOT NULL
                             )''')
         self.connection.commit()
 
-    def insert_encoding(self, username, encoding):
-        self.cursor.execute("INSERT INTO encodings (username, encoding) VALUES (?, ?)", (username, encoding))
+    def insert_encoding(self, student, encodings):
+        self.cursor.execute("INSERT INTO encodings (student_id, full_name, grade, encoding) VALUES (?, ?, ?, ?)", (student.student_id,student.full_name, student.grade, encodings))
         self.connection.commit()
     
     def mix_encodings(self, new_encodings):
         # Selecciona todos los nombres de usuario y codificaciones de la tabla 'encodings'
-        self.cursor.execute("SELECT username, encoding FROM encodings")
+        self.cursor.execute("SELECT full_name, encoding FROM encodings")
         rows = self.cursor.fetchall()
 
         mixed_encodings = new_encodings
