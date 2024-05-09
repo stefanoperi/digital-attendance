@@ -29,7 +29,7 @@ class DatabaseManager:
         self.cursor.execute("SELECT full_name, encoding FROM encodings")
         rows = self.cursor.fetchall()
 
-        mixed_encodings = new_encodings
+        mixed_encodings = new_encodings.copy()
         for row in rows:
             username = row[0]
             encoding_bytes = row[1] 
