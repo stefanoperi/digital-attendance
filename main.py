@@ -11,7 +11,6 @@ def main():
             print("Nueva carpeta: faces")
     
 
-
     face_manager = utils.FaceManager()
     faces_path = "images/faces"
     
@@ -61,10 +60,9 @@ def main():
     
     face_detector = utils.FaceDetector()
     face_detector.live_comparison(mixed_encodings)
-    
     # Guarda los datos del estudiante en la base de datos para un rendimiento mas eficiente
     answer = None
- 
+   
     if student_encodings:
         while True:
             answer = input("¿Desea guardar los datos de la persona en la base de datos? [si/no]: ").lower()

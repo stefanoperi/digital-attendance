@@ -1,4 +1,5 @@
 import sqlite3
+import copy
 import numpy as np
 class DatabaseManager:
     def __init__(self, db_name):
@@ -29,7 +30,7 @@ class DatabaseManager:
         self.cursor.execute("SELECT full_name, encoding FROM encodings")
         rows = self.cursor.fetchall()
 
-        mixed_encodings = new_encodings.copy()
+        mixed_encodings = copy.deepcopy(new_encodings)
         for row in rows:
             username = row[0]
             encoding_bytes = row[1] 
@@ -38,7 +39,7 @@ class DatabaseManager:
             encoding = np.frombuffer(encoding_bytes, dtype=np.float64)  
 
             # Si el nombre de usuario ya está en las codificaciones mixtas, agrega la nueva codificación
-            if username in new_encodings:
+            if username in mixed_encodings:
                 mixed_encodings[username].append(encoding)
 
             # Si el nombre de usuario no está en las codificaciones mixtas, crea una nueva entrada
