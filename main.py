@@ -2,7 +2,7 @@ import os
 import shutil 
 from images import face_utils as utils
 from images import db_module 
-from images import spreadsheet_module
+from images import spreadsheet_module 
 
 def main(): 
 
@@ -49,7 +49,7 @@ def main():
                delete_faces_folder(student, face_manager)
 
                face_manager.save_faces(student, new_photos)
-               student_encodings = face_manager.encode_faces(faces_path)
+               student_encodings = face_manager.encode_faces(faces_path, student)
             break
 
         elif answer == "no":
@@ -57,7 +57,7 @@ def main():
     
     db_manager.create_table()
     mixed_encodings = db_manager.mix_encodings(student_encodings)
-    
+    print(mixed_encodings)
     face_detector = utils.FaceDetector()
     face_detector.live_comparison(mixed_encodings)
     # Guarda los datos del estudiante en la base de datos para un rendimiento mas eficiente
@@ -71,8 +71,8 @@ def main():
                 db_manager.create_table()
 
                 # Insertar encodings e informacion en la base de datos
-                for person, encodings in student_encodings.items():
-                    print(f"Nombre: {person}, Encoding: {encodings}")
+                for student_id, encodings in student_encodings.items():
+                    print(f"DNI: {student_id}, Encoding: {encodings}")
                     for encoding in encodings:
                         db_manager.insert_encoding(student, encoding.tobytes())
 

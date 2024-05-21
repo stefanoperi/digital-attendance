@@ -1,6 +1,7 @@
 import cv2
 import os
 import face_recognition
+from images import spreadsheet_module
 import time
 
 
@@ -40,7 +41,8 @@ class FaceDetector:
                 face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB) 
                 actual_encoding = face_recognition.face_encodings(face, known_face_locations = [(0, w, h, 0)])[0] 
                 
-                name = "Desconocido"
+                unknown = "Desconocido"
+                name = unknown
                 color = (50, 50 , 255)
                 
                 # Compara codificaciones de cara detectada con la lista de codificaciones por cada persona en la base de datos
@@ -48,12 +50,22 @@ class FaceDetector:
                     result = face_recognition.compare_faces(encodings_dict[key], actual_encoding)
                     if True in result:
                         name = key
-                        color = (125, 220, 0) 
+                        color = (125, 220, 0)   
                         break
-
+                 
                 cv2.rectangle(frame, (x, y + h), (x + w, y + h + 30), color, -1)
                 cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
                 cv2.putText(frame, name, (x, y + h + 25), 2, 1, (255, 255 , 255), 2, cv2.LINE_AA)
+
+                if name != unknown:
+                    student_list = spreadsheet_module.read_values()
+                    if student_already_marked():
+                        return print("Estudiante ya marcado")
+        
+                    print("Quedese quieto un momento...")
+                    spreadsheet_module.mark_attendance(name)
+                     
+
             
             cv2.imshow("Frame", frame)
     
@@ -146,7 +158,7 @@ class FaceManager:
         except Exception as e:
             print(f"Error al guardar las imagenes: {e}")
     
-    def encode_faces(self, faces_path):
+    def encode_faces(self, faces_path, student):
         encodings_dict = {}
         # Iterar sobre cada carpeta de los usuarios
         count = 0
@@ -155,12 +167,12 @@ class FaceManager:
 
             # Lista para almacenar todas las codificaciones faciales de la persona actual
             person_encodings = []
-
+            
+            # Codificar cada imagen
             for user_faces in os.listdir(user_faces_path):
                 image_path = os.path.join(user_faces_path, user_faces)
                 image = cv2.imread(image_path)
-                # Cambiar formato de colores a RGB para face_recognition
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) # Cambiar formato de colores a RGB 
         
                 f_coding = face_recognition.face_encodings(image, known_face_locations = [(0, 150, 150, 0)])[0]
                 person_encodings.append(f_coding)
@@ -170,7 +182,7 @@ class FaceManager:
 
             # Agregar la lista de codificaciones faciales de la persona al diccionario
             if person_encodings:
-                encodings_dict[user_folder.split(".")[0]] = person_encodings
+                encodings_dict[student.student_id] = person_encodings
         
         return encodings_dict
     
