@@ -2,9 +2,11 @@ import cv2
 import os
 import face_recognition
 from images import spreadsheet_module
+from images import db_module 
 import time
 
-
+db_manager = db_module.DatabaseManager("encodings.db")
+db_manager.connect()
 class FaceDetector:
     def __init__(self):
         self.face_classifier = cv2.CascadeClassifier("./classifiers/frontalface_classifier.xml")
@@ -15,7 +17,7 @@ class FaceDetector:
         faces = self.face_classifier.detectMultiScale(gray_image, 1.1, 5)
         return faces
     
-    def live_comparison(self, encodings_dict):
+    def live_comparison(self, encodings_dict, student):
         cap = cv2.VideoCapture(0)
         # cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
    
@@ -42,29 +44,52 @@ class FaceDetector:
                 actual_encoding = face_recognition.face_encodings(face, known_face_locations = [(0, w, h, 0)])[0] 
                 
                 unknown = "Desconocido"
-                name = unknown
-                color = (50, 50 , 255)
+                person_found = {"name": unknown, "id": unknown}
+                color = (0, 0, 250) # Rojo
                 
                 # Compara codificaciones de cara detectada con la lista de codificaciones por cada persona en la base de datos
                 for key in encodings_dict:
                     result = face_recognition.compare_faces(encodings_dict[key], actual_encoding)
                     if True in result:
-                        name = key
+                        person_found["id"] = key
                         color = (125, 220, 0)   
                         break
-                 
-                cv2.rectangle(frame, (x, y + h), (x + w, y + h + 30), color, -1)
-                cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
-                cv2.putText(frame, name, (x, y + h + 25), 2, 1, (255, 255 , 255), 2, cv2.LINE_AA)
+                
+                # Encontrar el nombre de la persona encontrada
 
-                if name != unknown:
+                if student != None and person_found["id"] == student.student_id:
+                    person_found["name"] = student.full_name # Si coincide con el ultimo estudiante capturado
+                else:
+                    db_manager.cursor.execute("SELECT student_id FROM encodings WHERE student_id = ?", (person_found["id"],))
+                    result = db_manager.cursor.fetchone()
+                    
+                    if result: # Si el DNI esta en la base de datos
+                        db_manager.cursor.execute("SELECT full_name FROM encodings WHERE student_id = ?", (person_found["id"],))
+                        name_result = db_manager.cursor.fetchone()
+                        
+                        if name_result: # Si coincide con algun DNI de la base de datos
+                            person_found["name"] = name_result[0]
+                        else:
+                            person_found["name"] = unknown
+                    else:
+                        person_found["name"] = unknown
+            
+                cv2.rectangle(frame, (x, y + h), (x + w, y + h + 50), color, -1)  # Rectángulo inferior
+                cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)  # Rectángulo de la cara
+
+                # Dibujar el nombre y el DNI
+                cv2.putText(frame, person_found["name"], (x, y + h + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255 , 255), 2, cv2.LINE_AA)  # Nombre
+                cv2.putText(frame, f"ID: {person_found['id']}", (x, y + h + 45), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255 , 255), 2, cv2.LINE_AA)  # DNI
+                
+                """ 
+                if person_found["name"] != unknown:
                     student_list = spreadsheet_module.read_values()
                     if student_already_marked():
                         return print("Estudiante ya marcado")
         
                     print("Quedese quieto un momento...")
                     spreadsheet_module.mark_attendance(name)
-                     
+            """
 
             
             cv2.imshow("Frame", frame)

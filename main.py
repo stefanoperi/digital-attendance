@@ -57,9 +57,9 @@ def main():
     
     db_manager.create_table()
     mixed_encodings = db_manager.mix_encodings(student_encodings)
-    print(mixed_encodings)
+    
     face_detector = utils.FaceDetector()
-    face_detector.live_comparison(mixed_encodings)
+    face_detector.live_comparison(mixed_encodings, student)
     # Guarda los datos del estudiante en la base de datos para un rendimiento mas eficiente
     answer = None
    
