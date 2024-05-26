@@ -61,7 +61,7 @@ class GoogleSheetManager:
 
         student_list = self.read_values()
         self.create_layout()
-
+        print(student_list)
         # Verificar si el estudiante ya existe
         if student_list:
             for sublist in student_list:
@@ -79,7 +79,6 @@ class GoogleSheetManager:
 
         # Limpiar el contenido actual de la hoja de cálculo
         self.worksheet.clear()
-        
         
         # Escribir los datos ordenados en la hoja de cálculo
         for row, values in enumerate(student_list, start=2):

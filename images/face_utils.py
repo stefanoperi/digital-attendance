@@ -10,6 +10,9 @@ db_manager.connect()
 class FaceDetector:
     def __init__(self):
         self.face_classifier = cv2.CascadeClassifier("./classifiers/frontalface_classifier.xml")
+        self.confirmation_threshold = 5  # Número de detecciones consecutivas requeridas para confirmar la presencia
+        self.confirmed_person_id = None
+        self.consecutive_detections = 0
 
     def detect_faces(self, image):
         # Detecta caras en una imagen y devuelve las coordenadas de los rectángulos que las encierran
@@ -26,13 +29,11 @@ class FaceDetector:
 
         while True:
             success, frame = cap.read()
-            if frame is None:
-                print(f"operation successful: {success}")
-                print("could not read camera")
+            if not success or frame is None:
+                print("No se pudo leer la camara")
                 continue
+
             frame = cv2.resize(frame, (640, 480))  
-            if success == False:
-                break
             frame = cv2.flip(frame, 1)
             orig = frame.copy()
             faces = self.detect_faces(frame)
@@ -43,55 +44,11 @@ class FaceDetector:
                 face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB) 
                 actual_encoding = face_recognition.face_encodings(face, known_face_locations = [(0, w, h, 0)])[0] 
                 
-                unknown = "Desconocido"
-                person_found = {"name": unknown, "id": unknown}
-                color = (0, 0, 250) # Rojo
-                
-                # Compara codificaciones de cara detectada con la lista de codificaciones por cada persona en la base de datos
-                for key in encodings_dict:
-                    result = face_recognition.compare_faces(encodings_dict[key], actual_encoding)
-                    if True in result:
-                        person_found["id"] = key
-                        color = (125, 220, 0)   
-                        break
-                
-                # Encontrar el nombre de la persona encontrada
+                person_found, color = self.identify_person(encodings_dict, actual_encoding, student)
+                self.draw_info(frame, x, y, w, h, person_found, color)
 
-                if student != None and person_found["id"] == student.student_id:
-                    person_found["name"] = student.full_name # Si coincide con el ultimo estudiante capturado
-                else:
-                    db_manager.cursor.execute("SELECT student_id FROM encodings WHERE student_id = ?", (person_found["id"],))
-                    result = db_manager.cursor.fetchone()
-                    
-                    if result: # Si el DNI esta en la base de datos
-                        db_manager.cursor.execute("SELECT full_name FROM encodings WHERE student_id = ?", (person_found["id"],))
-                        name_result = db_manager.cursor.fetchone()
-                        
-                        if name_result: # Si coincide con algun DNI de la base de datos
-                            person_found["name"] = name_result[0]
-                        else:
-                            person_found["name"] = unknown
-                    else:
-                        person_found["name"] = unknown
-            
-                cv2.rectangle(frame, (x, y + h), (x + w, y + h + 50), color, -1)  # Rectángulo inferior
-                cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)  # Rectángulo de la cara
-
-                # Dibujar el nombre y el DNI
-                cv2.putText(frame, person_found["name"], (x, y + h + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255 , 255), 2, cv2.LINE_AA)  # Nombre
-                cv2.putText(frame, f"ID: {person_found['id']}", (x, y + h + 45), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255 , 255), 2, cv2.LINE_AA)  # DNI
-                
-                """ 
-                if person_found["name"] != unknown:
-                    student_list = spreadsheet_module.read_values()
-                    if student_already_marked():
-                        return print("Estudiante ya marcado")
-        
-                    print("Quedese quieto un momento...")
-                    spreadsheet_module.mark_attendance(name)
-            """
-
-            
+                self.confirm_presence(person_found)
+      
             cv2.imshow("Frame", frame)
     
             elapsed_time = time.time() - start_time
@@ -107,6 +64,54 @@ class FaceDetector:
 
         cap.release()
         cv2.destroyAllWindows()
+
+    def identify_person(self, encodings_dict, actual_encoding, student):
+        unknown = "Desconocido"
+        person_found = {"name": unknown, "id": unknown}
+        color = (0, 0, 250)  # Rojo
+        
+        # Compara codificaciones de cara detectada con la lista de codificaciones por cada persona en la base de datos
+        for key in encodings_dict:
+            result = face_recognition.compare_faces(encodings_dict[key], actual_encoding)
+            if True in result:
+                person_found["id"] = key
+                color = (125, 220, 0)
+                break
+
+        # Encontrar el nombre de la persona encontrada
+        if student and person_found["id"] == student.student_id:  # Si coincide con el ultimo estudiante capturado
+            person_found["name"] = student.full_name
+        else:
+            db_manager.cursor.execute("SELECT student_id FROM encodings WHERE student_id = ?", (person_found["id"],))
+            result = db_manager.cursor.fetchone()
+            
+            if result: # Si el DNI encontrado esta en la base de datos
+                db_manager.cursor.execute("SELECT full_name FROM encodings WHERE student_id = ?", (person_found["id"],))
+                name_result = db_manager.cursor.fetchone()
+                person_found["name"] = name_result[0] if name_result else unknown  # Si el nombre fue encontrado
+
+            else: # Si el DNI NO fue encontrado
+                person_found["name"] = unknown
+
+        return person_found, color
+    
+    def draw_info(self, frame, x, y, w, h, person_found, color):
+        cv2.rectangle(frame, (x, y + h), (x + w, y + h + 50), color, -1)  # Rectángulo inferior
+        cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)  # Rectángulo de la cara
+
+        # Dibujar el nombre y el DNI
+        cv2.putText(frame, person_found["name"], (x, y + h + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)  # Nombre
+        cv2.putText(frame, f"ID: {person_found['id']}", (x, y + h + 45), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)  # DNI
+    
+    def confirm_presence(self, person_found):
+        if self.confirmed_person_id == person_found["id"]:
+            self.consecutive_detections += 1
+        else:
+            self.confirmed_person_id = person_found["id"]
+            self.consecutive_detections = 1
+        
+        if self.consecutive_detections >= self.confirmation_threshold:
+            print(f"La presencia de {person_found['name']} ha sido confirmada.")
 
 class PhotoCapturer:
     def __init__(self):
