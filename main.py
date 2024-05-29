@@ -50,7 +50,11 @@ def main():
 
                face_manager.save_faces(student, new_photos)
                student_encodings = face_manager.encode_faces(faces_path, student)
-            break
+               break
+            else:
+                raise ValueError("No se ha tomado ninguna foto nueva")
+                
+            
 
         elif answer == "no":
             break

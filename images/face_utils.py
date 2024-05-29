@@ -17,7 +17,7 @@ class FaceDetector:
     def detect_faces(self, image):
         # Detecta caras en una imagen y devuelve las coordenadas de los rectángulos que las encierran
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        faces = self.face_classifier.detectMultiScale(gray_image, 1.1, 5)
+        faces = self.face_classifier.detectMultiScale(gray_image, 1.2, 5)
         return faces
     
     def live_comparison(self, encodings_dict, student):

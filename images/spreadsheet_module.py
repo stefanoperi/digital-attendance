@@ -28,8 +28,7 @@ class GoogleSheetManager:
         cell_list = self.worksheet.range(cell_range)
 
         # Iterar sobre las palabras en el diseño y asignarlas a las celdas correspondientes
-        for i, word in enumerate(layout):
-            cell_list[i].value = word
+        self.worksheet.insert_row(layout, 1)
 
         # Aplicar cambios a las celdas
         self.worksheet.update_cells(cell_list)
@@ -60,8 +59,7 @@ class GoogleSheetManager:
     def add_student(self, student):
 
         student_list = self.read_values()
-        self.create_layout()
-        print(student_list)
+    
         # Verificar si el estudiante ya existe
         if student_list:
             for sublist in student_list:
@@ -72,18 +70,19 @@ class GoogleSheetManager:
         student_list.append([student.full_name, student.student_id])
 
         # Eliminar sublistas vacías (si las hay)
-        student_list = [sublist for sublist in student_list if sublist]
+        student_list = [sublist for sublist in student_list if sublist and any(sublist)]
         
         # Ordenar la lista alfabéticamente por el primer carácter del nombre        
         student_list.sort(key=lambda x: x[0].lower())
-
+        print(student_list)
         # Limpiar el contenido actual de la hoja de cálculo
         self.worksheet.clear()
+        #self.create_layout()
         
         # Escribir los datos ordenados en la hoja de cálculo
         for row, values in enumerate(student_list, start=2):
             self.worksheet.insert_row(values, row)
-
+            print(row)
             cell_range = f"A{row}:C{row}"
             self.worksheet.format(cell_range, {
                 'borders': {
