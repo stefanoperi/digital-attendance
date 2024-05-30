@@ -4,13 +4,16 @@ import face_recognition
 from images import spreadsheet_module
 from images import db_module 
 import time
+import datetime
 
 db_manager = db_module.DatabaseManager("encodings.db")
 db_manager.connect()
+
+sheet_manager = spreadsheet_module.GoogleSheetManager('Toma de Asistencia')
 class FaceDetector:
     def __init__(self):
         self.face_classifier = cv2.CascadeClassifier("./classifiers/frontalface_classifier.xml")
-        self.confirmation_threshold = 5  # Número de detecciones consecutivas requeridas para confirmar la presencia
+        self.confirmation_threshold = 10  # Número de detecciones consecutivas requeridas para confirmar la presencia
         self.confirmed_person_id = None
         self.consecutive_detections = 0
 
@@ -111,7 +114,11 @@ class FaceDetector:
             self.consecutive_detections = 1
         
         if self.consecutive_detections >= self.confirmation_threshold:
-            print(f"La presencia de {person_found['name']} ha sido confirmada.")
+            time_found = datetime.datetime.now()
+            if sheet_manager.register_presence(person_found, time_found) == 0:
+                print(f"La presencia de {person_found['name']} ha sido confirmada.")
+            else:
+                print(f"La presencia de {person_found['name']} ya habia sido confirmada")
 
 class PhotoCapturer:
     def __init__(self):
