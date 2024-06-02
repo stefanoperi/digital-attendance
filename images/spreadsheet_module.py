@@ -1,6 +1,7 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import threading
+from datetime import datetime
 
 class GoogleSheetManager:
     _instance = None
@@ -35,29 +36,6 @@ class GoogleSheetManager:
         self.grade_selected = grade
         self.worksheet = self.spreadsheet.worksheet(grade)
 
-    def create_layout(self):
-        layout = ["Nombre", "DNI", "Presente"]
-        cell_range = "A1:C1"
-
-        # Obtener la lista de celdas en el rango especificado
-        cell_list = self.worksheet.range(cell_range)
-
-        # Iterar sobre las palabras en el diseño y asignarlas a las celdas correspondientes
-        self.worksheet.insert_row(layout, 1)
-
-        # Aplicar cambios a las celdas
-        self.worksheet.update_cells(cell_list)
-
-        # Aplicar bordes al rango de celdas
-        self.worksheet.format(cell_range, {
-            'borders': {
-                'top': {'style': 'SOLID'},
-                'bottom': {'style': 'SOLID'},
-                'left': {'style': 'SOLID'},
-                'right': {'style': 'SOLID'},
-            }
-        })
-
     def read_values(self):
         # Obtener todos los valores de la hoja de cálculo (Estudiantes del curso)
         values = self.worksheet.get_all_values()
@@ -71,20 +49,32 @@ class GoogleSheetManager:
         return worksheet_names
     
     def clean_sort(self, student_list):
-        # Eliminar sublistas vacias
-        student_list = [sublist for sublist in student_list if sublist and any(sublist)]
+        if len(student_list) > 1:
+            # Eliminar sublistas vacias
+            student_list = [sublist for sublist in student_list if sublist and any(sublist)]
+            
+            # Mantener la primera sublista intacta y ordenar el resto
+            header = student_list[0]
+            data = student_list[1:]
 
-        # Eliminar el primer elemento si la lista no está vacía
-        if student_list:
-            student_list.pop(0)
+            student_list = [header] + data
 
-        # Ordenar la lista alfabéticamente por el primer carácter del nombre        
-        student_list.sort(key=lambda x: x[0].lower())
+            # Ordenar la lista alfabéticamente por el primer carácter del nombre        
+            data.sort(key=lambda x: x[0].lower())
+
+            return student_list
 
     def add_student(self, student):
-
         student_list = self.read_values()
-    
+
+        # Asegurar que la primera sublista tenga al menos 3 elementos
+        if len(student_list[0]) < 3:
+            student_list[0].extend([""] * (3 - len(student_list[0])))
+
+        student_list[0][0] = "Estudiante"
+        student_list[0][1] = "DNI"
+        student_list[0][2] = "Presencia"
+
         # Verificar si el estudiante ya existe
         if student_list:
             for sublist in student_list:
@@ -97,14 +87,12 @@ class GoogleSheetManager:
         # Ordenar y limpiar lista
         student_list = self.clean_sort(student_list)
 
-        print(student_list)
         # Limpiar el contenido actual de la hoja de cálculo
         self.worksheet.clear()
-        #self.create_layout()
-        
+       
         # Escribir los datos ordenados en la hoja de cálculo
-        for row, values in enumerate(student_list, start=2):
-            self.worksheet.insert_row(values, row)
+        for row, values in enumerate(student_list, start=1):
+            self.worksheet.insert_row(values, row) """ USAR UPDATE CELL EN VEZ DE INSERT ROW """
             cell_range = f"A{row}:C{row}"
         
             # Verificar si las celdas están vacías antes de aplicar el formato
@@ -131,14 +119,24 @@ class GoogleSheetManager:
         return True
     def register_presence(self, person_found, time_found):
         student_list = self.clean_sort(self.read_values())
+        if student_list == None:
+            print("Aun no hay ningun alumno inscripto en el curso")
+            return
+        
+        # Convertir time_found a string si es un objeto datetime
+        if isinstance(time_found, datetime):
+            time_found = time_found.strftime('%Y-%m-%d %H:%M:%S')
 
-        for row, sublist in enumerate(student_list, start=2):
+        for row, sublist in enumerate(student_list, start=1):
             if person_found["name"] == sublist[0] and person_found["id"] == sublist[1]:
-                if sublist[3]:  # Si ya está marcado
-                    return 0
-                else:
-                    # Agregar en la columna C de la fila donde está el estudiante escrito, la hora en la que se confirmó la presencia
-                    self.worksheet.update_cell(row, 3, time_found)
+                if sublist[2]:  # Si ya habia sido marcado
+                    print(f"La presencia de {person_found['name']} ya habia sido confirmada")
                     return 1
+                else:
+                    # Agregar en la columna C de la fila donde está el estudiante escrito, el momento en el que se confirmó la presencia
+                    self.worksheet.update_cell(row, 3, time_found)
+                    print(f"La presencia de {person_found['name']} ha sido confirmada.")
+                    return 0
 
         print(f"La persona encontrada no pertenece al curso {self.grade_selected}")
+        return -1

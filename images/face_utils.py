@@ -115,10 +115,9 @@ class FaceDetector:
         
         if self.consecutive_detections >= self.confirmation_threshold:
             time_found = datetime.datetime.now()
-            if sheet_manager.register_presence(person_found, time_found) == 0:
-                print(f"La presencia de {person_found['name']} ha sido confirmada.")
-            else:
-                print(f"La presencia de {person_found['name']} ya habia sido confirmada")
+            sheet_manager.register_presence(person_found, time_found)
+        
+         
 
 class PhotoCapturer:
     def __init__(self):
