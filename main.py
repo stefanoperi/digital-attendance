@@ -1,58 +1,67 @@
 import os
 import shutil 
-from images import face_utils as utils
-from images import db_module 
-from images import spreadsheet_module 
+from image_handling import face_utils as utils
+from database import db_module 
+from spreadsheet import spreadsheet_module 
 
 def main(): 
 
-    if not os.path.exists("images/faces"):
-            os.makedirs("images/faces")
-            print("Nueva carpeta: faces")
+    if not os.path.exists("image_handling/faces"):
+            os.makedirs("image_handling/faces")
+            print("New folder: faces")
     
 
     face_manager = utils.FaceManager()
-    faces_path = "images/faces"
+    faces_path = "image_handling/faces"
     
-    db_manager = db_module.DatabaseManager("encodings.db")
+    db_directory = "database"
+    db_file = "encodings.db"
+    db_path = os.path.join(db_directory, db_file)
+
+    os.makedirs(db_directory, exist_ok=True)
+
+    db_manager = db_module.DatabaseManager(db_path)
     db_manager.connect()
-  
+
     student_encodings = {} 
     new_photos = None
     student = None
     
     
-    sheet_manager = spreadsheet_module.GoogleSheetManager('Toma de Asistencia')
-    worksheet_names = sheet_manager.read_worksheet_names() # Obtener nombre de cursos
+    sheet_manager = spreadsheet_module.GoogleSheetManager("Toma de Asistencia") # Open by the google spreadsheet's name
+    worksheet_names = sheet_manager.read_worksheet_names() # Get course names
     
-    # Preguntar por grado con el cual trabajar
-    grade = get_valid_input(worksheet_names, "Escribe el grado al que se le tomara asistencia (Ej: 6to A): ") 
-    sheet_manager.select_grade(grade) 
-    print(f"Informacion de {grade}: {sheet_manager.read_values()}")
+    # Ask for the grade to work with
+    if worksheet_names:
+        grade = get_valid_input(worksheet_names, f"Enter the grade for attendance (Available options: {worksheet_names}) ") 
+        sheet_manager.select_grade(grade)
+        print(f"Information for {grade}: {sheet_manager.read_values()}")
+    else:
+        raise ValueError("No courses are currently available")
     
 
     answer = None
     while True:
-        answer = input("Quieres agregar nuevas fotos? [si/no] ").lower()
+        answer = input("Do you want to add new photos? [yes/no] ").lower()
 
-        if answer == "si":
+        if answer == "yes":
             capturer = utils.PhotoCapturer()
             new_photos = capturer.capture_photo()
 
             if new_photos:
-               full_name = input("Escribe el nombre completo de la persona capturada: ").strip().title()
-               student_id = input("Escribe el numero de DNI de la persona capturada: ")
-               student_grade = get_valid_input(worksheet_names, "Escribe el grado de la persona capturada (Ej: 6to A): ") 
+               full_name = input("Enter the full name of the captured person: ").strip().title()
+               student_id = input("Enter the ID number of the captured person: ")
+               student_grade = get_valid_input(worksheet_names, "Enter the grade of the captured person (e.g., 6th A): ") 
 
                student = Student(student_id=student_id, full_name=full_name, grade=student_grade)
-               # Asegurar de borrar fotos restantes antes de añadir nuevas
+               # Ensure to delete remaining photos before adding new ones
                delete_faces_folder(student, face_manager)
 
                face_manager.save_faces(student, new_photos)
                student_encodings = face_manager.encode_faces(faces_path, student)
                break
             else:
-                raise ValueError("No se ha tomado ninguna foto nueva")
+                raise ValueError("No new photos have been taken")
                 
             
 
@@ -64,24 +73,23 @@ def main():
     
     face_detector = utils.FaceDetector()
     face_detector.live_comparison(mixed_encodings, student)
-    # Guarda los datos del estudiante en la base de datos para un rendimiento mas eficiente
     answer = None
    
+    # Save student data in the database for more efficient performance
     if student_encodings:
         while True:
-            answer = input("¿Desea guardar los datos de la persona en la base de datos? [si/no]: ").lower()
+            answer = input("Do you want to save the person's data in the database? [yes/no]: ").lower()
             
-            if answer == "si":
+            if answer == "yes":
                 db_manager.create_table()
 
-                # Insertar encodings e informacion en la base de datos
+                # Insert encodings and information into the database
                 for student_id, encodings in student_encodings.items():
-                    print(f"DNI: {student_id}, Encoding: {encodings}")
                     for encoding in encodings:
                         db_manager.insert_encoding(student, encoding.tobytes())
 
                 db_manager.close()
-                print("Datos guardados exitosamente en la base de datos.")
+                print("Data successfully saved to the database.")
 
                 sheet_manager.add_student(student)
                 break
@@ -104,18 +112,16 @@ def get_valid_input(options, prompt):
         if user_input in options:
             return user_input
         else:
-            print(f"La opción '{user_input}' no es válida. Por favor, intenta nuevamente.")
+            print(f"No spreadsheet is named {user_input}. The option {user_input} is not valid,  please try again.")
 
 def delete_faces_folder(student, face_manager):
    try:
         shutil.rmtree(f"{face_manager.faces_folder}/{str(student.full_name)}")
    except FileNotFoundError as e:
-        print(f"No hay fotos sobrantes que borrar :)")
+        print(f"No leftover photos to delete :)")
    except OSError as e:
-        raise OSError(f"Error al eliminar la carpeta: {e}")
+        raise OSError(f"Error deleting folder: {e}")
         
 
 if __name__ == "__main__":
     main()
-
-

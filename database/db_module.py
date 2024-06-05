@@ -1,4 +1,3 @@
-
 import sqlite3
 import copy
 import threading
@@ -10,11 +9,11 @@ class DatabaseManager:
     _instance = None
     _instance_lock = threading.Lock()
 
-    # Método especial __new__ para crear la instancia única
+    # Special __new__ method to create the unique instance
     def __new__(cls, *args, **kwargs):
-        # Adquirir el lock para garantizar que la creación de la instancia sea segura para subprocesos
+        # Acquire the lock to ensure thread-safe instance creation
         with cls._instance_lock:
-            # Verificamos si la instancia aún no existe
+            # Check if the instance does not already exist
             if not cls._instance:
                 cls._instance = super(DatabaseManager, cls).__new__(cls)
                 cls._instance.__initialized = False
@@ -65,7 +64,7 @@ class DatabaseManager:
                         raise
     
     def mix_encodings(self, new_encodings):
-        # Selecciona todos los nombres de usuario y codificaciones de la tabla 'encodings'
+        # Select all user names and encodings from the 'encodings' table
         self.cursor.execute("SELECT student_id, encoding FROM encodings")
         rows = self.cursor.fetchall()
 
@@ -74,14 +73,14 @@ class DatabaseManager:
             student_id = row[0]
             encoding_bytes = row[1] 
 
-            # Convierte  los bytes a un arreglo de NumPy para compatibilidad
+            # Convert the bytes to a NumPy array for compatibility
             encoding = np.frombuffer(encoding_bytes, dtype=np.float64)  
 
-            # Si el nombre de usuario ya está en las codificaciones mixtas, agrega la nueva codificación
+            # If the user name is already in the mixed encodings, add the new encoding
             if student_id in mixed_encodings:
                 mixed_encodings[student_id].append(encoding)
 
-            # Si el nombre de usuario no está en las codificaciones mixtas, crea una nueva entrada
+            # If the user name is not in the mixed encodings, create a new entry
             else:
                 mixed_encodings[student_id] = [encoding]
         return mixed_encodings
