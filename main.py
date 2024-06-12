@@ -4,6 +4,29 @@ from image_handling import face_utils as utils
 from database import db_module 
 from spreadsheet import spreadsheet_module 
 
+class Student:
+    def __init__(self, student_id, full_name, grade):
+        self.student_id = student_id
+        self.full_name = full_name
+        self.grade = grade
+
+def get_valid_input(options, prompt):
+    while True:
+        user_input = input(prompt).strip()
+        if user_input in options:
+            return user_input
+        else:
+            print(f"No spreadsheet is named {user_input}. The option {user_input} is not valid,  please try again.")
+
+def delete_faces_folder(student, face_manager):
+   try:
+        shutil.rmtree(f"{face_manager.faces_folder}/{str(student.full_name)}")
+   except FileNotFoundError as e:
+        print(f"No leftover photos to delete :)")
+   except OSError as e:
+        raise OSError(f"Error deleting folder: {e}")
+   
+
 def main(): 
 
     if not os.path.exists("image_handling/faces"):
@@ -51,7 +74,7 @@ def main():
             if new_photos:
                full_name = input("Enter the full name of the captured person: ").strip().title()
                student_id = input("Enter the ID number of the captured person: ")
-               student_grade = get_valid_input(worksheet_names, "Enter the grade of the captured person (e.g., 6th A): ") 
+               student_grade = get_valid_input(worksheet_names, f"Enter the grade of the captured person (Available options: {worksheet_names}) ") 
 
                student = Student(student_id=student_id, full_name=full_name, grade=student_grade)
                # Ensure to delete remaining photos before adding new ones
@@ -98,30 +121,6 @@ def main():
                 break
         
         delete_faces_folder(student, face_manager)
- 
-    
-class Student:
-    def __init__(self, student_id, full_name, grade):
-        self.student_id = student_id
-        self.full_name = full_name
-        self.grade = grade
-
-def get_valid_input(options, prompt):
-    while True:
-        user_input = input(prompt).strip()
-        if user_input in options:
-            return user_input
-        else:
-            print(f"No spreadsheet is named {user_input}. The option {user_input} is not valid,  please try again.")
-
-def delete_faces_folder(student, face_manager):
-   try:
-        shutil.rmtree(f"{face_manager.faces_folder}/{str(student.full_name)}")
-   except FileNotFoundError as e:
-        print(f"No leftover photos to delete :)")
-   except OSError as e:
-        raise OSError(f"Error deleting folder: {e}")
-        
 
 if __name__ == "__main__":
     main()
