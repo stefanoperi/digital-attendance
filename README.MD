@@ -62,17 +62,17 @@ Follow these steps to set up the project:
      1. Create a spreadsheet.
      2. Enable Google Drive & Sheets API.
      3. Create a service account.
-     4. Save the credentials file in any place in the project in JSON format.
+     4. Save the credentials JSON file in the spreadsheet folder of the project.
 
    - Or watch the specified minutes of this tutorial:
      1. [Video tutorial](https://www.youtube.com/watch?v=wrR0YLzh4DQ&t=305s) [00:00 - 05:43] for a detailed walkthrough of the process.
      2. After following the instructions in the video, download the credentials file provided by Google.
-     3. Save the credentials file in any place in the project in JSON format.
+     3. Save the credentials JSON file in the spreadsheet folder of the project.
 
 
 5. **RENAME the credentials file to credentials.json**:
 
-    After obtaining the credentials file from Google, rename it to credentials.json and place it in the root directory of your project.
+    After obtaining the credentials file from Google, rename it to credentials.json and place it in the spreadsheet folder of the  project.
 
 
 6. **Create worksheets**:

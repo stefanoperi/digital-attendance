@@ -1,8 +1,16 @@
+import kivy
 import os
 import shutil 
+
 from image_handling import face_utils as utils
 from database import db_module 
 from spreadsheet import spreadsheet_module 
+from kivy.app import App
+from kivy.uix.label import Label
+from kivy.uix.boxlayout import BoxLayout
+from kivy.clock import Clock
+from kivy.uix.button import Button
+from kivy.uix.screenmanager import Screen, ScreenManager
 
 class Student:
     def __init__(self, student_id, full_name, grade):
@@ -25,6 +33,91 @@ def delete_faces_folder(student, face_manager):
         print(f"No leftover photos to delete :)")
    except OSError as e:
         raise OSError(f"Error deleting folder: {e}")
+   
+class LoadingScreen(BoxLayout):
+    def __init__(self, transition_callback, **kwargs):
+        super().__init__(**kwargs)  # Load base class (BoxLayout)
+        self.transition = transition_callback
+
+        # Set orientation and padding for the layout
+        self.orientation = 'vertical'
+        self.padding = [50]
+
+        # Create and add the label
+        self.label = Label(text='Digital Attendance System', font_size=30)
+        self.add_widget(self.label)
+        Clock.schedule_once(lambda instance: self.transition('main') , 3)
+
+class MainScreen(BoxLayout):
+    def __init__(self, transition_callback, **kwargs):
+        super().__init__(**kwargs) 
+        self.transition = transition_callback
+
+        self.orientation = 'vertical'
+        self.padding = [50]
+
+        # Create and add a button to the main screen
+        self.button = Button(text='Start', font_size=20, size_hint=(None, None), size=(200, 50))
+        self.button.bind(on_press=lambda instance: self.transition('running'))
+        self.add_widget(self.button)
+
+        self.button = Button(text='Add new photos', font_size=20, size_hint=(None, None), size=(200, 50))
+        self.button.bind(on_press=lambda instance: self.transition('capturer'))
+        self.add_widget(self.button)
+    
+
+class CapturerScreen(BoxLayout):
+    def __init__(self, transition_callback, **kwargs):
+        super().__init__(**kwargs) 
+
+    ...
+
+class DemoScreen(BoxLayout): #Sin excel jodiendo
+    ...
+
+class PromptScreen(BoxLayout):
+    # Tiene que ser configurable para tres posibles pantallas
+    ...
+    
+class RunningScreen(BoxLayout):
+    ...
+
+class DigitalAttendanceApp(App):
+    def build(self):
+        # Create the screen manager
+        self.sm = ScreenManager()
+
+        # Create the loading screen and add it to the ScreenManager
+        loading_screen = Screen(name='loading')
+        loading_screen.add_widget(LoadingScreen(transition_callback=self.transition_to))
+        self.sm.add_widget(loading_screen)
+
+        # Create the main screen and add it to the ScreenManager
+        main_screen = Screen(name='main')
+        main_screen.add_widget(MainScreen(transition_callback=self.transition_to))
+        self.sm.add_widget(main_screen)
+
+        capturer_screen = Screen(name='capturer')
+        capturer_screen.add_widget(CapturerScreen(transition_callback=self.transition_to))
+        self.sm.add_widget(capturer_screen)
+
+
+        # Set the initial screen to the loading screen
+        self.sm.current = 'loading'        
+        
+        return self.sm
+
+    def transition_to(self, screen_name, *args):
+        self.sm.current = screen_name
+
+
+if __name__ == '__main__':
+    DigitalAttendanceApp().run()
+
+
+    
+
+""" 
    
 
 def main(): 
@@ -58,7 +151,7 @@ def main():
     if worksheet_names:
         grade = get_valid_input(worksheet_names, f"Enter the grade for attendance (Available options: {worksheet_names}) ") 
         sheet_manager.select_grade(grade)
-        print(f"Information for {grade}: {sheet_manager.read_values()}")
+        print(f"Information of {grade}: {sheet_manager.read_values()}")
     else:
         raise ValueError("No courses are currently available")
     
@@ -123,4 +216,4 @@ def main():
         delete_faces_folder(student, face_manager)
 
 if __name__ == "__main__":
-    main()
+    main()"""
