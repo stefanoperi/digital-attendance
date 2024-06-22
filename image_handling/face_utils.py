@@ -3,8 +3,10 @@ import os
 import face_recognition
 from spreadsheet import spreadsheet_module
 from database import db_module 
+import numpy as np
 import time
 import datetime
+from kivy.graphics.texture import Texture
 
 db_directory = "database"
 db_file = "encodings.db"
@@ -31,50 +33,52 @@ class FaceDetector:
         faces = self.face_classifier.detectMultiScale(gray_image, 1.2, 5)
         return faces
     
-    def live_comparison(self, encodings_dict, student):
-        cap = cv2.VideoCapture(0)
-        # cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-   
-        start_time = time.time()  # Start timing
-        num_frames = 0 
+    def live_comparison(self, encodings_dict, student, kivy_camera):
+        # Capturar el fotograma de la cámara Kivy
+        # Obtener los datos de la textura de la cámara Kivy
+        frame_data = kivy_camera.texture
+        frame_data = frame_data.pixels  # Obtener los píxeles de la textura
+        
+        # Convertir los datos del frame a un arreglo numpy
+        buf1 = np.frombuffer(frame_data, dtype=np.uint8)
+        frame = np.reshape(buf1, (kivy_camera.texture.height, kivy_camera.texture.width, 4))  # Darle forma de imagen (altura, anchura, 4 canales)
+        
+        # Convertir de RGBA a BGR (el formato que usa OpenCV)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
 
-        while True:
-            success, frame = cap.read()
-            if not success or frame is None:
-                print("Could not read from camera")
-                continue
-
-            frame = cv2.resize(frame, (640, 480))  
+        if frame is not None: 
+            frame = cv2.resize(frame, (640, 480))
             frame = cv2.flip(frame, 1)
-            orig = frame.copy()
+
+            # Detectar caras en el frame
             faces = self.detect_faces(frame)
 
+            # Procesar cada cara detectada
             for (x, y, w, h) in faces:
-                # Encode the location of the detected face in real-time
-                face = orig[y:y + h, x:x + w]
-                face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB) 
-                actual_encoding = face_recognition.face_encodings(face, known_face_locations = [(0, w, h, 0)])[0] 
+                face = frame[y:y + h, x:x + w]  # Extraer la región de la cara
+                face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)  # Convertir la cara a RGB
                 
-                person_found, color = self.identify_person(encodings_dict, actual_encoding, student)
-                self.draw_info(frame, x, y, w, h, person_found, color)
+                try:
+                    # Obtener la codificación de la cara
+                    found_encoding = face_recognition.face_encodings(face, known_face_locations=[(0, w, h, 0)])[0]
+                    # Identificar a la persona basada en la codificación
+                    person_found, color = self.identify_person(encodings_dict, found_encoding, student)
+                    # Dibujar información sobre la cara en el frame
+                    self.draw_info(frame, x, y, w, h, person_found, color)
+                    # Confirmar la presencia de la persona
+                    self.confirm_presence(person_found)
+                except IndexError:
+                    continue  # Continuar si no se encuentra una codificación
 
-                self.confirm_presence(person_found)
-      
-            cv2.imshow("Frame", frame)
-    
-            elapsed_time = time.time() - start_time
-            fps = num_frames / elapsed_time  # Calculate FPS
-            print(f"FPS: {fps:.2f}")
+            # Convertir la imagen modificada a una textura Kivy
+            buf1 = cv2.flip(frame, 0)  # Voltear la imagen verticalmente para que se vea correctamente en Kivy
+            buf = buf1.tobytes()  # Convertir la imagen a bytes
+            # Crear una textura Kivy con los datos de la imagen
+            image_texture = Texture.create(size=(frame.shape[1], frame.shape[0]), colorfmt='bgr')
+            image_texture.blit_buffer(buf, colorfmt='bgr', bufferfmt='ubyte')
 
-            num_frames += 1  
+            # Devolver la imagen modificada como textura
 
-            k = cv2.waitKey(1) & 0xFF
-            # If ESC key is pressed
-            if k == 27:
-                break
-
-        cap.release()
-        cv2.destroyAllWindows()
 
     def identify_person(self, encodings_dict, actual_encoding, student):
         unknown = "Unknown"
@@ -131,12 +135,9 @@ class PhotoCapturer:
     def __init__(self):
         self.face_detector = FaceDetector()
 
-    def capture_photo(self):
+    def capture_photo(self, cap):
         # Capture photos from the camera with face detector display
-        cap = cv2.VideoCapture(0)
-        if not cap.isOpened():
-            raise RuntimeError("Error: Could not open the camera")
-
+   
         captured_photos = []
         photo_count = 0
         while True:

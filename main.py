@@ -1,16 +1,22 @@
 import kivy
 import os
-import shutil 
+import shutil
+import cv2
+import face_recognition
+import numpy as np
 
 from image_handling import face_utils as utils
 from database import db_module 
 from spreadsheet import spreadsheet_module 
+
 from kivy.app import App
-from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
-from kivy.clock import Clock
 from kivy.uix.button import Button
-from kivy.uix.screenmanager import Screen, ScreenManager
+from kivy.uix.camera import Camera
+from kivy.uix.label import Label
+from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.clock import Clock
+from kivy.uix.spinner import Spinner
 
 class Student:
     def __init__(self, student_id, full_name, grade):
@@ -33,78 +39,109 @@ def delete_faces_folder(student, face_manager):
         print(f"No leftover photos to delete :)")
    except OSError as e:
         raise OSError(f"Error deleting folder: {e}")
-   
-class LoadingScreen(BoxLayout):
-    def __init__(self, transition_callback, **kwargs):
-        super().__init__(**kwargs)  # Load base class (BoxLayout)
-        self.transition = transition_callback
 
-        # Set orientation and padding for the layout
-        self.orientation = 'vertical'
-        self.padding = [50]
+class AppResources:
+    def __init__(self):
+        if not os.path.exists("image_handling/faces"):
+            os.makedirs("image_handling/faces")
+            print("New folder: faces")
 
-        # Create and add the label
-        self.label = Label(text='Digital Attendance System', font_size=30)
-        self.add_widget(self.label)
-        Clock.schedule_once(lambda instance: self.transition('main') , 3)
+        self.face_manager = utils.FaceManager()
+        self.faces_path = "image_handling/faces"
+
+        db_directory = "database"
+        db_file = "encodings.db"
+        db_path = os.path.join(db_directory, db_file)
+
+        os.makedirs(db_directory, exist_ok=True)
+
+        self.db_manager = db_module.DatabaseManager(db_path)
+        self.db_manager.connect()
+
+        self.student_encodings = {}
+        self.new_photos = None
+        self.student = None
+
+        self.capturer = utils.PhotoCapturer()
+          
+        self.sheet_manager = spreadsheet_module.GoogleSheetManager("Toma de Asistencia") # Open by the google spreadsheet's name
+        self.worksheet_names = self.sheet_manager.read_worksheet_names() # Get course names
+
 
 class MainScreen(BoxLayout):
-    def __init__(self, transition_callback, **kwargs):
-        super().__init__(**kwargs) 
+    def __init__(self, transition_callback, resources, **kwargs):
+        super().__init__(**kwargs)
         self.transition = transition_callback
+        self.resources = resources
 
-        self.orientation = 'vertical'
-        self.padding = [50]
+        self.orientation = 'horizontal'
+        
+        # Camera layout
+        camera_layout = BoxLayout(orientation='vertical', size_hint=(0.7, 1))
+        
+        # Add Camera widget
+        self.camera = Camera(play=True)
+        self.camera.size_hint = (1, 0.85)
+        camera_layout.add_widget(self.camera)
+        
+        # Add buttons at the bottom of the camera
+        button_layout = BoxLayout(orientation='horizontal', size_hint=(1, 0.15), padding=[0,0,0,100])
+        
+        self.spinner = Spinner(
+            text='Course',
+            values=(self.resources.worksheet_names), # Course names
+            size_hint=(None, None),
+            size=(200, 44),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+        )
+       
+        
+        button_layout.add_widget(self.spinner)
+        self.photo_button = Button(text='Add new photos', font_size=20)
+        self.photo_button.bind(on_press=lambda instance: self.transition('capturer'))
+        button_layout.add_widget(self.photo_button)
+        
+        camera_layout.add_widget(button_layout)
+        
+        # Add camera layout to the main layout
+        self.add_widget(camera_layout)
 
-        # Create and add a button to the main screen
-        self.button = Button(text='Start', font_size=20, size_hint=(None, None), size=(200, 50))
-        self.button.bind(on_press=lambda instance: self.transition('running'))
-        self.add_widget(self.button)
+        # Info layout
+        info_layout = BoxLayout(orientation='vertical', padding=[10], size_hint=(0.3, 1))
+        
+        self.info_label = Label(text='Student Info', font_size=20)
+        info_layout.add_widget(self.info_label)
+        
+        # Add more widgets to info_layout as needed, e.g., text inputs, additional labels, etc.
+        
+        self.add_widget(info_layout)
 
-        self.button = Button(text='Add new photos', font_size=20, size_hint=(None, None), size=(200, 50))
-        self.button.bind(on_press=lambda instance: self.transition('capturer'))
-        self.add_widget(self.button)
-    
+        # Initialize face detector
+        self.face_detector = utils.FaceDetector()
+        
+        # Schedule the update method
+        Clock.schedule_interval(self.update, 1.0 / 30.0)
 
-class CapturerScreen(BoxLayout):
-    def __init__(self, transition_callback, **kwargs):
-        super().__init__(**kwargs) 
-
-    ...
-
-class DemoScreen(BoxLayout): #Sin excel jodiendo
-    ...
-
-class PromptScreen(BoxLayout):
-    # Tiene que ser configurable para tres posibles pantallas
-    ...
-    
-class RunningScreen(BoxLayout):
-    ...
+    def update(self, dt):
+        image_texture = self.face_detector.live_comparison(self.resources.student_encodings, self.resources.student, self.camera)
+        self.camera.texture = image_texture
 
 class DigitalAttendanceApp(App):
     def build(self):
+        # Create the resources object
+        resources = AppResources()
+
         # Create the screen manager
         self.sm = ScreenManager()
-
-        # Create the loading screen and add it to the ScreenManager
-        loading_screen = Screen(name='loading')
-        loading_screen.add_widget(LoadingScreen(transition_callback=self.transition_to))
-        self.sm.add_widget(loading_screen)
-
+   
         # Create the main screen and add it to the ScreenManager
         main_screen = Screen(name='main')
-        main_screen.add_widget(MainScreen(transition_callback=self.transition_to))
+        main_screen.add_widget(MainScreen(transition_callback=self.transition_to, resources=resources))
         self.sm.add_widget(main_screen)
 
-        capturer_screen = Screen(name='capturer')
-        capturer_screen.add_widget(CapturerScreen(transition_callback=self.transition_to))
-        self.sm.add_widget(capturer_screen)
-
-
         # Set the initial screen to the loading screen
-        self.sm.current = 'loading'        
-        
+        self.sm.current = 'main'
+
         return self.sm
 
     def transition_to(self, screen_name, *args):
@@ -112,6 +149,7 @@ class DigitalAttendanceApp(App):
 
 
 if __name__ == '__main__':
+    
     DigitalAttendanceApp().run()
 
 
