@@ -34,50 +34,52 @@ class FaceDetector:
         return faces
     
     def live_comparison(self, encodings_dict, student, kivy_camera):
-        # Capturar el fotograma de la cámara Kivy
-        # Obtener los datos de la textura de la cámara Kivy
+        # Obtain frame data 
         frame_data = kivy_camera.texture
-        frame_data = frame_data.pixels  # Obtener los píxeles de la textura
+        frame_data = frame_data.pixels  
         
-        # Convertir los datos del frame a un arreglo numpy
+        # Convert frame data to numpy array
         buf1 = np.frombuffer(frame_data, dtype=np.uint8)
-        frame = np.reshape(buf1, (kivy_camera.texture.height, kivy_camera.texture.width, 4))  # Darle forma de imagen (altura, anchura, 4 canales)
-        
-        # Convertir de RGBA a BGR (el formato que usa OpenCV)
+        frame = np.reshape(buf1, (kivy_camera.texture.height, kivy_camera.texture.width, 4))  # Reshape to image form (height, width, 4 channels)
+    
+        # Convert from RGBA to BGR (format used by OpenCV)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
 
         if frame is not None: 
             frame = cv2.resize(frame, (640, 480))
             frame = cv2.flip(frame, 1)
 
-            # Detectar caras en el frame
+            # Detect faces in frame
             faces = self.detect_faces(frame)
 
-            # Procesar cada cara detectada
+            # Process each face found
             for (x, y, w, h) in faces:
-                face = frame[y:y + h, x:x + w]  # Extraer la región de la cara
-                face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)  # Convertir la cara a RGB
-                
+                face = frame[y:y + h, x:x + w]  # Extract face region
+                face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)  
+        
                 try:
-                    # Obtener la codificación de la cara
+                    # Encode face found
                     found_encoding = face_recognition.face_encodings(face, known_face_locations=[(0, w, h, 0)])[0]
-                    # Identificar a la persona basada en la codificación
+
+                    # Identify person based on the encoding found
                     person_found, color = self.identify_person(encodings_dict, found_encoding, student)
-                    # Dibujar información sobre la cara en el frame
                     self.draw_info(frame, x, y, w, h, person_found, color)
-                    # Confirmar la presencia de la persona
+
+                    # Confirm presence in Excel spreadsheet
                     self.confirm_presence(person_found)
                 except IndexError:
-                    continue  # Continuar si no se encuentra una codificación
+                    continue  
 
-            # Convertir la imagen modificada a una textura Kivy
-            buf1 = cv2.flip(frame, 0)  # Voltear la imagen verticalmente para que se vea correctamente en Kivy
-            buf = buf1.tobytes()  # Convertir la imagen a bytes
-            # Crear una textura Kivy con los datos de la imagen
-            image_texture = Texture.create(size=(frame.shape[1], frame.shape[0]), colorfmt='bgr')
-            image_texture.blit_buffer(buf, colorfmt='bgr', bufferfmt='ubyte')
+            # Convert CV2 modified image to a Kivy texture
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
+            frame = cv2.flip(frame, 0)  
+            buf = frame.tobytes()  
+            
+            # Create Kivy texture with image data
+            image_texture = Texture.create(size=(frame.shape[1], frame.shape[0]), colorfmt='rgb')
+            image_texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
 
-            # Devolver la imagen modificada como textura
+            return image_texture
 
 
     def identify_person(self, encodings_dict, actual_encoding, student):

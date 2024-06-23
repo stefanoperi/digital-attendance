@@ -16,7 +16,7 @@ from kivy.uix.camera import Camera
 from kivy.uix.label import Label
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.clock import Clock
-from kivy.uix.spinner import Spinner
+from kivy.uix.dropdown import DropDown
 
 class Student:
     def __init__(self, student_id, full_name, grade):
@@ -75,32 +75,38 @@ class MainScreen(BoxLayout):
         self.resources = resources
 
         self.orientation = 'horizontal'
-        
+    
         # Camera layout
         camera_layout = BoxLayout(orientation='vertical', size_hint=(0.7, 1))
         
-        # Add Camera widget
-        self.camera = Camera(play=True)
-        self.camera.size_hint = (1, 0.85)
-        camera_layout.add_widget(self.camera)
+        self.prompt_label = Label(text='Please select the course for attendance', font_size=20)
+        camera_layout.add_widget(self.prompt_label)
         
         # Add buttons at the bottom of the camera
         button_layout = BoxLayout(orientation='horizontal', size_hint=(1, 0.15), padding=[0,0,0,100])
         
-        self.spinner = Spinner(
-            text='Course',
-            values=(self.resources.worksheet_names), # Course names
-            size_hint=(None, None),
-            size=(200, 44),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5}
-        )
-       
+      # Create the dropdown and its button
+        self.dropdown = DropDown()
+        for course_name in self.resources.worksheet_names:
+            btn = Button(text=course_name, size_hint_y=None, height=44)
+            btn.bind(on_release=lambda btn: self.dropdown.select(btn.text))
+            self.dropdown.add_widget(btn)
+
+        self.dropdown_button = Button(text='Course', size_hint=(None, None), size=(200, 44))
+        self.dropdown_button.bind(on_release=self.dropdown.open)
+        self.dropdown.bind(on_select=lambda instance, x: setattr(self.dropdown_button, 'text', x))
         
-        button_layout.add_widget(self.spinner)
+        button_layout.add_widget(self.dropdown_button)
+        
         self.photo_button = Button(text='Add new photos', font_size=20)
         self.photo_button.bind(on_press=lambda instance: self.transition('capturer'))
         button_layout.add_widget(self.photo_button)
         
+        # Add Camera widget
+        #self.camera = Camera(play=True)
+        #self.camera.size_hint = (1, 0.85)
+        #camera_layout.add_widget(self.camera)
+
         camera_layout.add_widget(button_layout)
         
         # Add camera layout to the main layout
@@ -119,8 +125,8 @@ class MainScreen(BoxLayout):
         # Initialize face detector
         self.face_detector = utils.FaceDetector()
         
-        # Schedule the update method
-        Clock.schedule_interval(self.update, 1.0 / 30.0)
+        # Schedule the update method 30 times a second
+        #Clock.schedule_interval(self.update, 1.0 / 30.0)
 
     def update(self, dt):
         image_texture = self.face_detector.live_comparison(self.resources.student_encodings, self.resources.student, self.camera)

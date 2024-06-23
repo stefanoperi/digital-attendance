@@ -52,7 +52,7 @@ class GoogleSheetManager:
         worksheet_names = []
         for worksheet in self.spreadsheet.worksheets():
             worksheet_names.append(worksheet.title)
-        return worksheet_names
+        return sorted(worksheet_names)
     
     def clean_sort(self, student_list):
         if len(student_list) > 1:
@@ -63,10 +63,10 @@ class GoogleSheetManager:
             header = student_list[0]
             data = student_list[1:]
 
-            student_list = [header] + data
 
             # Sort the list alphabetically by the first character of the name        
             data.sort(key=lambda x: x[0].lower())
+            student_list = [header] + data
 
             return student_list
 
