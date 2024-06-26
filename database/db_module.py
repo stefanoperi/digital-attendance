@@ -76,11 +76,11 @@ class DatabaseManager:
             # Convert the bytes to a NumPy array for compatibility
             encoding = np.frombuffer(encoding_bytes, dtype=np.float64)  
 
-            # If the user name is already in the mixed encodings, add the new encoding
+            # If the user id is already in the mixed encodings, add the new encoding
             if student_id in mixed_encodings:
                 mixed_encodings[student_id].append(encoding)
 
-            # If the user name is not in the mixed encodings, create a new entry
+            # If the user id is not in the mixed encodings, create a new entry
             else:
                 mixed_encodings[student_id] = [encoding]
         return mixed_encodings

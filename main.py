@@ -3,6 +3,7 @@ import os
 import shutil
 import cv2
 import face_recognition
+import sys
 import numpy as np
 
 from image_handling import face_utils as utils
@@ -19,11 +20,11 @@ from kivy.clock import Clock
 from kivy.uix.dropdown import DropDown
 
 class Student:
-    def __init__(self, student_id, full_name, grade, encodings):
-        self.student_id = student_id
-        self.full_name = full_name
-        self.grade = grade
-        self.encodings = encodings
+    def __init__(self):
+        self.student_id = None
+        self.full_name = None
+        self.grade = None
+        self.encodings = None
         
 def get_valid_input(options, prompt):
     while True:
@@ -63,7 +64,7 @@ class AppResources:
 
         self.student_encodings = {}
         self.new_photos = None
-        self.student = None
+        self.last_registered_student = Student()
 
         self.capturer = utils.PhotoCapturer()
           
@@ -117,6 +118,17 @@ class MainScreen(BoxLayout):
     def setup_camera_layout(self):
         # Method to set up the camera and related UI layout
         camera_layout = BoxLayout(orientation='vertical', size_hint=(0.7, 1))
+
+        # Try to initialize the camera and handle errors
+        try:
+            camera_index = 0
+            self.camera = Camera(index=camera_index, play=True)
+        except Exception as e:
+            print(f"Failed to initialize the camera at index {camera_index}: {e}")
+            self.camera = Label(text='Camera initialization failed')
+        
+        camera_layout.add_widget(self.camera)
+     
         self.prompt_label = Label(text='Please select the course for attendance', font_size=20)
         camera_layout.add_widget(self.prompt_label)  # Add prompt label to camera layout
 
@@ -142,10 +154,14 @@ class MainScreen(BoxLayout):
         # Method to handle selection of a course from the dropdown
         self.selected_course = value  
         setattr(self.dropdown_button, 'text', value)  # Change original text to the selected course
+
+        self.resources.sheet_manager.select_grade(self.selected_course)
+        self.prompt_label.visible = False
+        
+
     
-    def run(self):
-        ...
-      
+
+
 
 
 class DigitalAttendanceApp(App):
