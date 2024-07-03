@@ -82,6 +82,7 @@ class MainScreen(BoxLayout):
         self.selected_course = None  
         self.orientation = 'horizontal'  
         self.face_detector = utils.FaceDetector()
+        self.update_event = None
 
         # Set up the UI components during initialization
         self.setup_ui()
@@ -117,22 +118,21 @@ class MainScreen(BoxLayout):
 
     def setup_camera_layout(self):
         # Method to set up the camera and related UI layout
-        camera_layout = BoxLayout(orientation='vertical', size_hint=(0.7, 1))
+        camera_layout = BoxLayout(orientation='vertical', size_hint=(0.8, 0.8), pos_hint={'center_x': 0.5, 'center_y': 0.5})
 
         # Try to initialize the camera and handle errors
         try:
             camera_index = 0
-            self.camera = Camera(index=camera_index, play=True)
+            self.camera = Camera(index=camera_index, play=True, size_hint=(1, 1))
         except Exception as e:
-            print(f"Failed to initialize the camera at index {camera_index}: {e}")
             self.camera = Label(text='Camera initialization failed')
         
         camera_layout.add_widget(self.camera)
      
-        self.prompt_label = Label(text='Please select the course for attendance', font_size=20)
+        self.prompt_label = Label(text='Please select the course for attendance', font_size=20, size_hint=(1, 0.1))
         camera_layout.add_widget(self.prompt_label)  # Add prompt label to camera layout
 
-        button_layout = BoxLayout(orientation='horizontal', size_hint=(1, 0.15), padding=[0, 0, 0, 100])
+        button_layout = BoxLayout(orientation='horizontal', size_hint=(1, 0.1))
         button_layout.add_widget(self.dropdown_button)  
         button_layout.add_widget(self.photo_button)  
         camera_layout.add_widget(button_layout) # Add all buttons to the camera layout
@@ -147,17 +147,30 @@ class MainScreen(BoxLayout):
 
     def update(self, dt):
         # Method to update the camera display
-        image_texture = self.face_detector.live_comparison(self.resources.student_encodings, self.resources.student, self.camera)
+        image_texture = self.face_detector.live_comparison(self.resources.student_encodings, self.resources.last_registered_student, self.camera)
         self.camera.texture = image_texture  # Update camera texture with live comparison result
 
     def on_course_select(self, instance, value):
+        # Cancel the previous update event if it exists
+        if self.update_event is not None:
+            self.update_event.cancel()
+        
         # Method to handle selection of a course from the dropdown
         self.selected_course = value  
         setattr(self.dropdown_button, 'text', value)  # Change original text to the selected course
 
         self.resources.sheet_manager.select_grade(self.selected_course)
-        self.prompt_label.visible = False
+        self.prompt_label.opacity = 0
         
+        # Schedule the update method to be called periodically if a course is selected
+        if self.selected_course is not None:
+            self.update_event = Clock.schedule_interval(self.update, 1/30)  # Call update every 1/30th of a second (~30 FPS)
+
+    def stop_update(self):
+        # Method to stop the update schedule
+        if self.update_event is not None:
+            self.update_event.cancel()
+            self.update_event = None
 
     
 

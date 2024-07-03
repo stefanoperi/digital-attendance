@@ -51,7 +51,7 @@ class FaceDetector:
 
             # Detect faces in frame
             faces = self.detect_faces(frame)
-
+            
             # Process each face found
             for (x, y, w, h) in faces:
                 face = frame[y:y + h, x:x + w]  # Extract face region
@@ -64,11 +64,19 @@ class FaceDetector:
                     # Identify person based on the encoding found
                     person_found, color = self.identify_person(encodings_dict, found_encoding, student)
                     self.draw_info(frame, x, y, w, h, person_found, color)
-
+                    
                     # Confirm presence in Excel spreadsheet
                     self.confirm_presence(person_found)
                 except IndexError:
                     continue  
+                
+            # Course selected
+            text = f"Course of attendance: {sheet_manager.grade_selected}"
+            (text_width, text_height), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
+            x = frame.shape[1] - text_width - 10 
+            y = text_height + 10  
+            cv2.rectangle(frame, (x - 5, y - text_height - 5), (x + text_width + 5, y + 5), (0, 0, 0), cv2.FILLED)
+            cv2.putText(frame, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
 
             # Convert CV2 modified image to a Kivy texture
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
@@ -120,6 +128,7 @@ class FaceDetector:
         cv2.putText(frame, person_found["name"], (x, y + h + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)  # Name
         cv2.putText(frame, f"ID: {person_found['id']}", (x, y + h + 45), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)  # ID
     
+ 
     def confirm_presence(self, person_found):
         if self.confirmed_person_id == person_found["id"]:
             self.consecutive_detections += 1
