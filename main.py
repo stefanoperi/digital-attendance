@@ -18,6 +18,7 @@ from kivy.uix.label import Label
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.clock import Clock
 from kivy.uix.dropdown import DropDown
+from kivy.uix.textinput import TextInput
 
 class Student:
     def __init__(self):
@@ -60,7 +61,6 @@ class AppResources:
         self.db_manager = db_module.DatabaseManager(db_path)
         self.db_manager.connect()
         self.db_manager.create_table()
-
 
         self.student_encodings = {}
         self.new_photos = None
@@ -114,8 +114,13 @@ class MainScreen(BoxLayout):
     def setup_buttons(self):
         # Method to set up action buttons
         self.photo_button = Button(text='Add new photos', font_size=20)
-        self.photo_button.bind(on_press=lambda instance: self.transition('capturer'))  # Bind button press to transition callback    
+        self.photo_button.bind(on_press=self.on_photos_select)  # Bind button press to transition callback  
 
+        self.button_layout = BoxLayout(orientation='horizontal', size_hint=(1, 0.1))
+
+        self.button_layout.add_widget(self.dropdown_button)  
+        self.button_layout.add_widget(self.photo_button)  
+        
     def setup_camera_layout(self):
         # Method to set up the camera and related UI layout
         camera_layout = BoxLayout(orientation='vertical', size_hint=(0.8, 0.8), pos_hint={'center_x': 0.5, 'center_y': 0.5})
@@ -131,11 +136,7 @@ class MainScreen(BoxLayout):
      
         self.prompt_label = Label(text='Please select the course for attendance', font_size=20, size_hint=(1, 0.1))
         camera_layout.add_widget(self.prompt_label)  # Add prompt label to camera layout
-
-        button_layout = BoxLayout(orientation='horizontal', size_hint=(1, 0.1))
-        button_layout.add_widget(self.dropdown_button)  
-        button_layout.add_widget(self.photo_button)  
-        camera_layout.add_widget(button_layout) # Add all buttons to the camera layout
+        camera_layout.add_widget(self.button_layout)
         self.add_widget(camera_layout)  # Add camera layout to the main screen
 
     def setup_info_layout(self):
@@ -165,6 +166,77 @@ class MainScreen(BoxLayout):
         # Schedule the update method to be called periodically if a course is selected
         if self.selected_course is not None:
             self.update_event = Clock.schedule_interval(self.update, 1/30)  # Call update every 1/30th of a second (~30 FPS)
+    
+    def on_photos_select(self, instance):
+        if self.update_event is not None:
+            self.update_event.cancel()
+        
+        self.camera.play = False
+        self.transition('capturer')
+        
+    def stop_update(self):
+        # Method to stop the update schedule
+        if self.update_event is not None:
+            self.update_event.cancel()
+            self.update_event = None
+
+class CapturerScreen(BoxLayout):
+    def __init__(self, transition_callback, resources, **kwargs):
+        super().__init__(**kwargs)
+        
+        # Initialize with transition callback and resources
+        self.transition = transition_callback
+        self.resources = resources
+        self.selected_course = None  
+        self.orientation = 'horizontal'  
+        self.face_detector = utils.FaceDetector()
+        self.update_event = None
+
+        # Set up specific layouts and components
+        self.setup_ui()  
+       
+    def setup_ui(self):
+        self.setup_camera_layout()
+        self.setup_forms()
+
+    def setup_forms(self):
+        input_layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        
+        # Name input
+        self.name_input = TextInput(hint_text='Name')
+        input_layout.add_widget(Label(text='Name'))
+        input_layout.add_widget(self.name_input)
+        
+        # Last name input
+        self.lastname_input = TextInput(hint_text='Last Name')
+        input_layout.add_widget(Label(text='Last Name'))
+        input_layout.add_widget(self.lastname_input)
+        
+        # ID input (only numbers)
+        self.id_input = TextInput(hint_text='ID', input_filter='int')
+        input_layout.add_widget(Label(text='ID'))
+        input_layout.add_widget(self.id_input)
+
+        self.add_widget(input_layout)
+    
+    def setup_camera_layout(self):
+        # Method to set up the camera and related UI layout
+        camera_layout = BoxLayout(orientation='vertical', size_hint=(0.8, 0.8), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+
+        # Try to initialize the camera and handle errors
+        try:
+            camera_index = 0
+            self.camera = Camera(index=camera_index, play=True, size_hint=(1, 1))
+        except Exception as e:
+            self.camera = Label(text='Camera initialization failed')
+        
+        camera_layout.add_widget(self.camera)
+        self.add_widget(camera_layout)  # Add camera layout to the main screen
+
+    def update(self, dt):
+        # Method to update the camera display
+        image_texture = self.face_detector.live_comparison(self.resources.student_encodings, self.resources.last_registered_student, self.camera)
+        self.camera.texture = image_texture  # Update camera texture with live comparison result
 
     def stop_update(self):
         # Method to stop the update schedule
@@ -172,11 +244,10 @@ class MainScreen(BoxLayout):
             self.update_event.cancel()
             self.update_event = None
 
+
+
+
     
-
-
-
-
 class DigitalAttendanceApp(App):
     def build(self):
         # Create the resources object
@@ -189,6 +260,11 @@ class DigitalAttendanceApp(App):
         main_screen = Screen(name='main')
         main_screen.add_widget(MainScreen(transition_callback=self.transition_to, resources=resources))
         self.sm.add_widget(main_screen)
+
+        # Create the capturer screen and add it to the ScreenManager
+        capturer_screen = Screen(name='capturer')
+        capturer_screen.add_widget(CapturerScreen(transition_callback=self.transition_to, resources=resources))
+        self.sm.add_widget(capturer_screen)
 
         # Set the initial screen to the loading screen
         self.sm.current = 'main'

@@ -1,8 +1,10 @@
 import gspread
 import threading
 import os
+import time
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
+from gspread.exceptions import APIError
 
 
 class GoogleSheetManager:
@@ -37,16 +39,31 @@ class GoogleSheetManager:
 
         # Open the spreadsheet by its name
         self.spreadsheet = gc.open(spreadsheet_name)
+        self.cached_data = None 
+        self.last_fetch_time = 0 # Time from last request 
+        self.cache_duration = 60  # Time in seconds to keep the data in the cache
+        self.retry_delay = 5  
     
     def select_grade(self, grade):
         self.grade_selected = grade
         self.worksheet = self.spreadsheet.worksheet(grade)
 
     def read_values(self):
-        # Get all values from the spreadsheet (Students of the course)
-        values = self.worksheet.get_all_values()
-        return values
-    
+        current_time = time.time()
+        if self.cached_data is None or (current_time - self.last_fetch_time > self.cache_duration):
+            while True:
+                try:
+                    self.cached_data = self.worksheet.get_all_values()
+                    self.last_fetch_time = current_time
+                    break
+                except APIError as e:
+                    if 'quota' in str(e).lower():
+                        print("Cuota superada, esperando para reintentar...")
+                        time.sleep(self.retry_delay)
+                    else:
+                        raise e
+                    
+        return self.cached_data
     def read_worksheet_names(self):
         # Get worksheet names (Name of each course)
         worksheet_names = []
@@ -123,9 +140,9 @@ class GoogleSheetManager:
                     }
                 })
 
-          
         return True
-    
+  
+
     def register_presence(self, person_found, time_found):
         student_list = self.clean_sort(self.read_values())
         if student_list is None:
@@ -140,12 +157,12 @@ class GoogleSheetManager:
             if person_found["name"] == sublist[0] and person_found["id"] == sublist[1]:
                 if sublist[2]:  # If already marked
                     print(f"Presence of {person_found['name']} has already been confirmed")
-                    return 1
+                    return 
                 else:
                     # Add the time of presence confirmation in column C of the row where the student is written
                     self.worksheet.update_cell(row, 3, time_found)
-                    print(f"Presence of {person_found['name']} has been confirmed.")
-                    return 0
+                    print(f"Presence of {person_found['name']} has been confirmed. ")         
+                    return
 
-        print(f"The person found does not belong to the course {self.grade_selected}")
-        return -1
+        print(f"The person found does not belong to the course {self.grade_selected} ")
+        return 
