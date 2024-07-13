@@ -171,9 +171,13 @@ class MainScreen(BoxLayout):
         if self.update_event is not None:
             self.update_event.cancel()
         
-        self.camera.play = False
-        self.transition('capturer')
+        if hasattr(self, 'camera') and self.camera is not None:
+            self.camera.play = False
+            self.camera = None 
         
+        self.transition('capturer')
+
+
     def stop_update(self):
         # Method to stop the update schedule
         if self.update_event is not None:
@@ -188,7 +192,7 @@ class CapturerScreen(BoxLayout):
         self.transition = transition_callback
         self.resources = resources
         self.selected_course = None  
-        self.orientation = 'horizontal'  
+        self.orientation = 'vertical'  
         self.face_detector = utils.FaceDetector()
         self.update_event = None
 
@@ -228,7 +232,7 @@ class CapturerScreen(BoxLayout):
             camera_index = 0
             self.camera = Camera(index=camera_index, play=True, size_hint=(1, 1))
         except Exception as e:
-            self.camera = Label(text='Camera initialization failed')
+            self.camera = Label(text='Camera initialization failed ' + str(e))
         
         camera_layout.add_widget(self.camera)
         self.add_widget(camera_layout)  # Add camera layout to the main screen
