@@ -6,6 +6,7 @@ import face_recognition
 import sys
 import numpy as np
 
+
 from image_handling import face_utils as utils
 from database import db_module 
 from spreadsheet import spreadsheet_module 
@@ -71,7 +72,6 @@ class AppResources:
         self.sheet_manager = spreadsheet_module.GoogleSheetManager("Toma de Asistencia") # Open by the google spreadsheet's name
         self.worksheet_names = self.sheet_manager.read_worksheet_names() # Get course names
 
-
 class MainScreen(BoxLayout):
     def __init__(self, transition_callback, resources, **kwargs):
         super().__init__(**kwargs)
@@ -122,22 +122,37 @@ class MainScreen(BoxLayout):
         self.button_layout.add_widget(self.photo_button)  
         
     def setup_camera_layout(self):
-        # Method to set up the camera and related UI layout
-        camera_layout = BoxLayout(orientation='vertical', size_hint=(0.8, 0.8), pos_hint={'center_x': 0.5, 'center_y': 0.5})
 
-        # Try to initialize the camera and handle errors
-        try:
-            camera_index = 0
-            self.camera = Camera(index=camera_index, play=True, size_hint=(1, 1))
-        except Exception as e:
-            self.camera = Label(text='Camera initialization failed')
+        self.camera_layout = BoxLayout(orientation='vertical', size_hint=(0.8, 0.8), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+        self.camera_placeholder = Label(text='Initializing camera...')
+        self.camera_layout.add_widget(self.camera_placeholder)
+        self.initialize_camera(self)
         
-        camera_layout.add_widget(self.camera)
-     
         self.prompt_label = Label(text='Please select the course for attendance', font_size=20, size_hint=(1, 0.1))
-        camera_layout.add_widget(self.prompt_label)  # Add prompt label to camera layout
-        camera_layout.add_widget(self.button_layout)
-        self.add_widget(camera_layout)  # Add camera layout to the main screen
+        self.camera_layout.add_widget(self.prompt_label)  # Add prompt label to camera layout
+        self.camera_layout.add_widget(self.button_layout)
+
+        self.add_widget(self.camera_layout)
+
+        # Schedule camera initialization with a delay
+
+
+    def initialize_camera(self, dt):
+        camera_index = 0
+        while camera_index < 5:  # Try up to 5 different indices
+            try:
+                self.camera = Camera(index=camera_index, play=True, size_hint=(1, 1))
+                self.camera_placeholder.parent.add_widget(self.camera)
+                self.camera_placeholder.parent.remove_widget(self.camera_placeholder)
+                return  # Exit if successful
+            except Exception as e:
+                self.camera_placeholder.text = f"Failed to initialize camera at index {camera_index}: {e}"
+                camera_index += 1
+        
+        # If no camera could be initialized, show an error message
+        self.camera_placeholder.text = 'Camera initialization failed for all indices'
+
+
 
     def setup_info_layout(self):
         # Method to set up information display layout
@@ -168,21 +183,30 @@ class MainScreen(BoxLayout):
             self.update_event = Clock.schedule_interval(self.update, 1/30)  # Call update every 1/30th of a second (~30 FPS)
     
     def on_photos_select(self, instance):
-        if self.update_event is not None:
-            self.update_event.cancel()
-        
-        if hasattr(self, 'camera') and self.camera is not None:
-            self.camera.play = False
-            self.camera = None 
-        
-        self.transition('capturer')
+        self.clear_widgets()
+        self.add_widget(self.camera_layout)
+        self.add_widget(self.setup_capture_layout())
 
+    def setup_capture_layout(self):
+        capture_layout = BoxLayout(orientation='vertical')
+        self.name_input = TextInput(hint_text='Name')
+        capture_layout.add_widget(Label(text='Name'))
+        capture_layout.add_widget(self.name_input)
+        self.lastname_input = TextInput(hint_text='Last Name')
+        capture_layout.add_widget(Label(text='Last Name'))
+        capture_layout.add_widget(self.lastname_input)
+        self.id_input = TextInput(hint_text='ID', input_filter='int')
+        capture_layout.add_widget(Label(text='ID'))
+        capture_layout.add_widget(self.id_input)
+        return capture_layout
 
     def stop_update(self):
         # Method to stop the update schedule
         if self.update_event is not None:
             self.update_event.cancel()
             self.update_event = None
+
+
 
 class CapturerScreen(BoxLayout):
     def __init__(self, transition_callback, resources, **kwargs):
@@ -196,8 +220,9 @@ class CapturerScreen(BoxLayout):
         self.face_detector = utils.FaceDetector()
         self.update_event = None
 
-        # Set up specific layouts and components
-        self.setup_ui()  
+    def on_enter(self, *args):
+        # Set up specific layouts and components when entering the screen
+        self.setup_ui()
        
     def setup_ui(self):
         self.setup_camera_layout()
@@ -224,18 +249,29 @@ class CapturerScreen(BoxLayout):
         self.add_widget(input_layout)
     
     def setup_camera_layout(self):
-        # Method to set up the camera and related UI layout
         camera_layout = BoxLayout(orientation='vertical', size_hint=(0.8, 0.8), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+        self.camera_placeholder = Label(text='Initializing camera...')
+        camera_layout.add_widget(self.camera_placeholder)
+        self.add_widget(camera_layout)
 
-        # Try to initialize the camera and handle errors
-        try:
-            camera_index = 0
-            self.camera = Camera(index=camera_index, play=True, size_hint=(1, 1))
-        except Exception as e:
-            self.camera = Label(text='Camera initialization failed ' + str(e))
+        # Schedule camera initialization with a delay
+        Clock.schedule_once(self.initialize_camera, 10.0)
+    
+    def initialize_camera(self, dt):
+     
+        camera_index = 0
+        while camera_index < 5:  # Try up to 5 different indices
+            try:
+                self.camera = Camera(index=camera_index, play=True, size_hint=(1, 1))
+                self.camera_placeholder.parent.add_widget(self.camera)
+                self.camera_placeholder.parent.remove_widget(self.camera_placeholder)
+                return  # Exit if successful
+            except Exception as e:
+                self.camera_placeholder.text = f"Failed to initialize camera at index {camera_index}: {e}"
+                camera_index += 1
         
-        camera_layout.add_widget(self.camera)
-        self.add_widget(camera_layout)  # Add camera layout to the main screen
+        # If no camera could be initialized, show an error message
+        self.camera_placeholder.text = 'Camera initialization failed for all indices'
 
     def update(self, dt):
         # Method to update the camera display
@@ -249,9 +285,6 @@ class CapturerScreen(BoxLayout):
             self.update_event = None
 
 
-
-
-    
 class DigitalAttendanceApp(App):
     def build(self):
         # Create the resources object
@@ -264,11 +297,15 @@ class DigitalAttendanceApp(App):
         main_screen = Screen(name='main')
         main_screen.add_widget(MainScreen(transition_callback=self.transition_to, resources=resources))
         self.sm.add_widget(main_screen)
-
+        
         # Create the capturer screen and add it to the ScreenManager
         capturer_screen = Screen(name='capturer')
-        capturer_screen.add_widget(CapturerScreen(transition_callback=self.transition_to, resources=resources))
+        capturer_screen_instance = CapturerScreen(transition_callback=self.transition_to, resources=resources)
+        capturer_screen.add_widget(capturer_screen_instance)
         self.sm.add_widget(capturer_screen)
+
+        # Bind on_enter method of capturer_screen_instance to the on_enter event
+        capturer_screen.bind(on_enter=capturer_screen_instance.on_enter)
 
         # Set the initial screen to the loading screen
         self.sm.current = 'main'
