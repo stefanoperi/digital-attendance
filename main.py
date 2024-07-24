@@ -76,7 +76,6 @@ class MainScreen(BoxLayout):
     def __init__(self, transition_callback, resources, **kwargs):
         super().__init__(**kwargs)
         
-        # Initialize with transition callback and resources
         self.transition = transition_callback
         self.resources = resources
         self.selected_course = None  
@@ -84,10 +83,7 @@ class MainScreen(BoxLayout):
         self.face_detector = utils.FaceDetector()
         self.update_event = None
 
-        # Set up the UI components during initialization
         self.setup_ui()
-        
-        # Set up specific layouts and components
         self.setup_camera_layout()
         self.setup_info_layout()
        
@@ -96,117 +92,144 @@ class MainScreen(BoxLayout):
         self.setup_buttons()  
 
     def setup_dropdown(self):
-        # Method to set up the dropdown menu
-        self.dropdown = DropDown()  # Create a dropdown instance
+        self.dropdown = DropDown()
         for course_name in self.resources.worksheet_names:
-            self.add_dropdown_item(course_name)  # Add each course name as a dropdown item
+            self.add_dropdown_item(course_name)
 
         self.dropdown_button = Button(text='Course', size_hint=(None, None), size=(200, 44))
-        self.dropdown_button.bind(on_release=self.dropdown.open)  # Bind button to open the dropdown
-        self.dropdown.bind(on_select=self.on_course_select)  # Bind dropdown selection to handler method
+        self.dropdown_button.bind(on_release=self.dropdown.open)
+        self.dropdown.bind(on_select=self.on_course_select)
     
     def add_dropdown_item(self, course_name):
-        # Add each course name as a dropdown item
         btn = Button(text=course_name, size_hint_y=None, height=44)
-        btn.bind(on_release=lambda btn: self.dropdown.select(btn.text))  # Bind button to select dropdown item
+        btn.bind(on_release=lambda btn: self.dropdown.select(btn.text))
         self.dropdown.add_widget(btn)  
 
     def setup_buttons(self):
-        # Method to set up action buttons
         self.photo_button = Button(text='Add new photos', font_size=20)
-        self.photo_button.bind(on_press=self.on_photos_select)  # Bind button press to transition callback  
+        self.photo_button.bind(on_press=self.on_photos_select)
 
         self.button_layout = BoxLayout(orientation='horizontal', size_hint=(1, 0.1))
-
         self.button_layout.add_widget(self.dropdown_button)  
         self.button_layout.add_widget(self.photo_button)  
         
     def setup_camera_layout(self):
-
         self.camera_layout = BoxLayout(orientation='vertical', size_hint=(0.8, 0.8), pos_hint={'center_x': 0.5, 'center_y': 0.5})
         self.camera_placeholder = Label(text='Initializing camera...')
         self.camera_layout.add_widget(self.camera_placeholder)
-        self.initialize_camera(self)
-        
-        self.prompt_label = Label(text='Please select the course for attendance', font_size=20, size_hint=(1, 0.1))
-        self.camera_layout.add_widget(self.prompt_label)  # Add prompt label to camera layout
-        self.camera_layout.add_widget(self.button_layout)
+        self.initialize_camera()
 
+        self.prompt_label = Label(text='Please select the course for attendance', font_size=20, size_hint=(1, 0.1))
+        self.camera_layout.add_widget(self.prompt_label)
+        self.camera_layout.add_widget(self.button_layout)
         self.add_widget(self.camera_layout)
 
-        # Schedule camera initialization with a delay
-
-
-    def initialize_camera(self, dt):
+    def initialize_camera(self):
         camera_index = 0
-        while camera_index < 5:  # Try up to 5 different indices
+        while camera_index < 5:
             try:
                 self.camera = Camera(index=camera_index, play=True, size_hint=(1, 1))
                 self.camera_placeholder.parent.add_widget(self.camera)
                 self.camera_placeholder.parent.remove_widget(self.camera_placeholder)
-                return  # Exit if successful
+                return
             except Exception as e:
                 self.camera_placeholder.text = f"Failed to initialize camera at index {camera_index}: {e}"
                 camera_index += 1
         
-        # If no camera could be initialized, show an error message
         self.camera_placeholder.text = 'Camera initialization failed for all indices'
 
-
-
     def setup_info_layout(self):
-        # Method to set up information display layout
         info_layout = BoxLayout(orientation='vertical', padding=[10], size_hint=(0.3, 1))
         self.info_label = Label(text='Student Info', font_size=20)
-        info_layout.add_widget(self.info_label)  # Add label for student info
-        self.add_widget(info_layout)  # Add info layout to the main screen
+        info_layout.add_widget(self.info_label)
+        self.add_widget(info_layout)
 
     def update(self, dt):
-        # Method to update the camera display
         image_texture = self.face_detector.live_comparison(self.resources.student_encodings, self.resources.last_registered_student, self.camera)
-        self.camera.texture = image_texture  # Update camera texture with live comparison result
+        self.camera.texture = image_texture
 
     def on_course_select(self, instance, value):
-        # Cancel the previous update event if it exists
         if self.update_event is not None:
             self.update_event.cancel()
         
-        # Method to handle selection of a course from the dropdown
         self.selected_course = value  
-        setattr(self.dropdown_button, 'text', value)  # Change original text to the selected course
-
+        setattr(self.dropdown_button, 'text', value)
         self.resources.sheet_manager.select_grade(self.selected_course)
         self.prompt_label.opacity = 0
         
-        # Schedule the update method to be called periodically if a course is selected
         if self.selected_course is not None:
-            self.update_event = Clock.schedule_interval(self.update, 1/30)  # Call update every 1/30th of a second (~30 FPS)
-    
+            self.update_event = Clock.schedule_interval(self.update, 1/30)
+
     def on_photos_select(self, instance):
         self.clear_widgets()
+        self.stop_update()
         self.add_widget(self.camera_layout)
-        self.add_widget(self.setup_capture_layout())
-
-    def setup_capture_layout(self):
-        capture_layout = BoxLayout(orientation='vertical')
-        self.name_input = TextInput(hint_text='Name')
-        capture_layout.add_widget(Label(text='Name'))
-        capture_layout.add_widget(self.name_input)
-        self.lastname_input = TextInput(hint_text='Last Name')
-        capture_layout.add_widget(Label(text='Last Name'))
-        capture_layout.add_widget(self.lastname_input)
-        self.id_input = TextInput(hint_text='ID', input_filter='int')
-        capture_layout.add_widget(Label(text='ID'))
-        capture_layout.add_widget(self.id_input)
-        return capture_layout
+        self.add_widget(self.CapturerScreen(self))
 
     def stop_update(self):
-        # Method to stop the update schedule
         if self.update_event is not None:
             self.update_event.cancel()
             self.update_event = None
 
+    class CapturerScreen(BoxLayout):
+        def __init__(self, main_screen, **kwargs):
+            super().__init__(**kwargs)
+            self.main_screen = main_screen
+            self.change_previous_layout()
+            self.setup_forms()
+            
+        def change_previous_layout(self):
+            # Remove unnecesary widgets from previous layout
+            self.main_screen.camera_layout.remove_widget(self.main_screen.button_layout)
+            self.main_screen.camera_layout.remove_widget(self.main_screen.prompt_label)
+      
+        def setup_forms(self):
+            input_layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
+            
+            # Name input
+            self.name_input = TextInput(hint_text='Name')
+            input_layout.add_widget(Label(text='Name'))
+            input_layout.add_widget(self.name_input)
+            
+            # Last name input
+            self.lastname_input = TextInput(hint_text='Last Name')
+            input_layout.add_widget(Label(text='Last Name'))
+            input_layout.add_widget(self.lastname_input)
+            
+            # ID input (only numbers)
+            self.id_input = TextInput(hint_text='ID', input_filter='int')
+            input_layout.add_widget(Label(text='ID'))
+            input_layout.add_widget(self.id_input) 
+                
+            # Action buttons
+            action_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=None, height=50)
+            
+            self.save_button = Button(text='Save', size_hint_x=0.2, width=50)
+            self.save_button.bind(on_press=self.save_action)
+            action_layout.add_widget(self.save_button)
 
+            self.cancel_button = Button(text='Cancel', size_hint_x=0.2, width=50)
+            self.cancel_button.bind(on_press=self.cancel_action)
+            action_layout.add_widget(self.cancel_button)
+            
+            # Add the input layout and action buttons to the main layout
+            input_layout.add_widget(action_layout)
+            self.main_screen.camera_layout.add_widget(input_layout)
+        
+        def save_action(self, instance):
+            # Handle the save action here
+            name = self.name_input.text
+            lastname = self.lastname_input.text
+            student_id = self.id_input.text
+            print(f"Saved: Name={name}, Last Name={lastname}, ID={student_id}")
+            # Additional save logic goes here
+
+        def cancel_action(self, instance):
+            # Handle the cancel action here
+            print("Cancelled")
+            # Additional cancel logic goes here
+        
+    
 
 class CapturerScreen(BoxLayout):
     def __init__(self, transition_callback, resources, **kwargs):
