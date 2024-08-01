@@ -1,6 +1,15 @@
 """ 
    
-
+import kivy
+import os
+import shutil
+import cv2
+import face_recognition
+import sys
+import numpy as np
+from image_handling import face_utils as utils
+from database import db_module 
+from spreadsheet import spreadsheet_module 
 def main(): 
 
     if not os.path.exists("image_handling/faces"):
