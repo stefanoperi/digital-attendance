@@ -51,7 +51,7 @@ class MainScreen(FloatLayout):
         self.button_layout.add_widget(self.photo_button)  
         
     def setup_camera_layout(self):
-        self.camera_layout = BoxLayout(orientation='vertical', size_hint=(0.8, 0.8), pos_hint={'center_x': 0.5, 'center_y': 0.5})
+        self.camera_layout = BoxLayout(orientation='vertical', size_hint=(0.7, 0.9), pos_hint={'center_x': 0.4, 'center_y': 0.5})
         self.camera_placeholder = Label(text='Initializing camera...')
         self.camera_layout.add_widget(self.camera_placeholder)
         self.initialize_camera()
@@ -76,7 +76,7 @@ class MainScreen(FloatLayout):
         self.camera_placeholder.text = 'Camera initialization failed for all indices'
 
     def setup_info_layout(self):
-        self.info_layout = BoxLayout(orientation='vertical', padding=[10], size_hint=(0.3, 1))
+        self.info_layout = BoxLayout(orientation='vertical', padding=[10], size_hint=(0.3, 1), pos_hint={'right': 1})
         self.info_label = Label(text='Student Info', font_size=20)
         self.info_layout.add_widget(self.info_label)
         self.add_widget(self.info_layout)

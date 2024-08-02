@@ -13,6 +13,8 @@ class CapturerScreen(FloatLayout):
         self.main_screen = main_screen
     
     def on_enter(self):
+        self.main_screen.camera_layout.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+        self.main_screen.camera_layout.size_hint = (0.9, 1)
         self.change_previous_layout()
         self.setup_forms()
         
