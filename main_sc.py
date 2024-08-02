@@ -77,13 +77,18 @@ class MainScreen(FloatLayout):
 
     def setup_info_layout(self):
         self.info_layout = BoxLayout(orientation='vertical', padding=[10], size_hint=(0.3, 1), pos_hint={'right': 1})
-        self.info_label = Label(text='Student Info', font_size=20)
         self.info_layout.add_widget(self.info_label)
         self.add_widget(self.info_layout)
 
     def update(self, dt):
-        image_texture = self.face_detector.live_comparison(self.resources.student_encodings, self.resources.last_registered_student, self.camera)
+        image_texture, person_found = self.face_detector.live_comparison(self.resources.student_encodings, self.camera)
         self.camera.texture = image_texture
+        # AUTOMATIZAR ESTO CON UN FOR LOOP
+        self.info_layout.clear_widgets()
+        self.info_layout.add_widget(Label(text=f'ID: {person_found["id"]} ', font_size=20))
+        self.info_layout.add_widget(Label(text=f'Name: {person_found["name"]} ', font_size=20))
+        self.info_layout.add_widget(Label(text=f'Grade: {person_found["grade"]} ', font_size=20))
+
 
     def on_course_select(self, instance, value):
         if self.update_event is not None:

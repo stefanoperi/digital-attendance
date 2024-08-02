@@ -87,10 +87,10 @@ class FaceDetector:
             image_texture = Texture.create(size=(frame.shape[1], frame.shape[0]), colorfmt='rgb')
             image_texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
 
-            return image_texture
+            return image_texture, person_found
 
 
-    def identify_person(self, encodings_dict, actual_encoding, student):
+    def identify_person(self, encodings_dict, actual_encoding):
         unknown = "Unknown"
         person_found = {"name": unknown, "id": unknown}
         color = (0, 0, 250)  # Red
@@ -100,24 +100,11 @@ class FaceDetector:
             result = face_recognition.compare_faces(encodings_dict[key], actual_encoding)
             if True in result:
                 person_found["id"] = key
-                color = (125, 220, 0)
-                break
-
-        # Find the name of the found person
-        if student and person_found["id"] == student.student_id:  # If it matches the last captured student
-            person_found["name"] = student.full_name
-        else:
-            db_manager.cursor.execute("SELECT student_id FROM encodings WHERE student_id = ?", (person_found["id"],))
-            result = db_manager.cursor.fetchone()
-            
-            if result:  # If the found ID is in the database
-                db_manager.cursor.execute("SELECT full_name FROM encodings WHERE student_id = ?", (person_found["id"],))
-                name_result = db_manager.cursor.fetchone()
-                person_found["name"] = name_result[0] if name_result else unknown  # If the name was found
-
-            else:  # If the ID was NOT found
-                person_found["name"] = unknown
-
+                result = db_manager.cursor.execute("SELECT student_id, full_name, grade FROM encodings WHERE student_id = ?", (person_found["id"],)).fetchone()
+                person_found["name"] = result["full_name"]
+                person_found["grade"] = result["grade"]
+                color = (125, 220, 0) 
+             
         return person_found, color
     
     def draw_info(self, frame, x, y, w, h, person_found, color):
