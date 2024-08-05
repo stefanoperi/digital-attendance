@@ -1,4 +1,4 @@
-
+from image_handling import face_utils as utils
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
@@ -7,16 +7,20 @@ from kivy.clock import Clock
 from kivy.uix.textinput import TextInput
 from kivy.uix.floatlayout import FloatLayout
 
+import sys
+
 class CapturerScreen(FloatLayout):
     def __init__(self, main_screen, **kwargs):
         super().__init__(**kwargs)
         self.main_screen = main_screen
+        self.photo_capturer = utils.PhotoCapturer()
     
     def on_enter(self):
         self.main_screen.camera_layout.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
         self.main_screen.camera_layout.size_hint = (0.9, 1)
         self.change_previous_layout()
         self.setup_forms()
+        Clock.schedule_interval(self.update, 1/30)
         
     def change_previous_layout(self):
         # Remove unnecesary widgets from previous layout
@@ -55,7 +59,10 @@ class CapturerScreen(FloatLayout):
         # Add the input layout and action buttons to the main layout
         input_layout.add_widget(action_layout)
         self.main_screen.camera_layout.add_widget(input_layout)
-    
+
+    def update(self, dt):
+       image_texture = self.photo_capturer.capture_photo(self.main_screen.camera)
+
     def save_action(self, instance):
         # Handle the save action here
         name = self.name_input.text
@@ -65,6 +72,5 @@ class CapturerScreen(FloatLayout):
         # Additional save logic goes here
 
     def cancel_action(self, instance):
-        # Handle the cancel action here
-        print("Cancelled")
+        sys.exit(0)
         # Additional cancel logic goes here

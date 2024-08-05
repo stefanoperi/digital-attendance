@@ -20,6 +20,21 @@ db_manager.connect()
 
 sheet_manager = spreadsheet_module.GoogleSheetManager('Toma de Asistencia') # Open by the name of the google spreadsheet
 
+def kivy_to_cv2(kivy_camera):
+    # Obtain frame data 
+    frame_data = kivy_camera.texture
+    frame_data = frame_data.pixels  
+    
+    # Convert frame data to numpy array
+    buf1 = np.frombuffer(frame_data, dtype=np.uint8)
+
+    # Reshape to image form (height, width, 4 channels)
+    frame = np.reshape(buf1, (kivy_camera.texture.height, kivy_camera.texture.width, 4))  
+    
+    # Convert from RGBA to BGR (format used by OpenCV)
+    frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
+    return frame
+
 class FaceDetector:
     def __init__(self):
         self.face_classifier = cv2.CascadeClassifier("./classifiers/frontalface_classifier.xml")
@@ -34,17 +49,10 @@ class FaceDetector:
         return faces
     
     def live_comparison(self, encodings_dict, kivy_camera):
-        # Obtain frame data 
-        frame_data = kivy_camera.texture
-        frame_data = frame_data.pixels  
-        
-        # Convert frame data to numpy array
-        buf1 = np.frombuffer(frame_data, dtype=np.uint8)
-        frame = np.reshape(buf1, (kivy_camera.texture.height, kivy_camera.texture.width, 4))  # Reshape to image form (height, width, 4 channels)
-    
-        # Convert from RGBA to BGR (format used by OpenCV)
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
 
+        # Convert kivy camera into compatible cv2 format
+        frame = kivy_to_cv2(kivy_camera)
+    
         unknown = "Unknown"
         person_found = {"name": unknown, "id": unknown, "grade": unknown} 
         if frame is not None: 
@@ -134,13 +142,17 @@ class PhotoCapturer:
     def __init__(self):
         self.face_detector = FaceDetector()
 
-    def capture_photo(self, cap):
+    def capture_photo(self, kivy_camera):
+        
+        # Convert kivy camera into compatible cv2 format
+        frame = kivy_to_cv2(kivy_camera)
+    
         # Capture photos from the camera with face detector display
-   
         captured_photos = []
         photo_count = 0
-        while True:
-            success, frame = cap.read()
+        photo_threshold = 100
+
+        while photo_count < photo_threshold:
             frame = cv2.resize(frame, (640, 480))  
             if not success:
                 raise RuntimeError("Error capturing frame")
@@ -152,22 +164,23 @@ class PhotoCapturer:
             for (x, y, w, h) in faces:
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
                 key = cv2.waitKey(1)
-                if brightness >= 120 and key == 32:  # If "SPACE BAR" is pressed and Brightness >= 100
+                if brightness >= 120 and key == 32:  # If "SPACE BAR" is pressed and Brightness
                     captured_photos.append(frame.copy())
                     photo_count += 1
                     print("Photo taken\n")
-                print(f"Brightness: {brightness:.2f}  / 120 \n")
+                print(f"Brightness: {brightness:.2f}  / 120 \n")    
 
-            cv2.imshow("frame", frame)
-          
-            # If "ESC" is pressed, close
-            key = cv2.waitKey(1)
-            if key == 27: 
-                break
+            # Convert CV2 modified image to a Kivy texture
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
+            frame = cv2.flip(frame, 0)  
+            buf = frame.tobytes()  
 
-        cap.release()
-        cv2.destroyAllWindows()
-        return captured_photos
+            # Create Kivy texture with image data
+            image_texture = Texture.create(size=(frame.shape[1], frame.shape[0]), colorfmt='rgb')
+            image_texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
+
+            return image_texture
+     
     
 
 
