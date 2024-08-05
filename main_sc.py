@@ -76,18 +76,20 @@ class MainScreen(FloatLayout):
         self.camera_placeholder.text = 'Camera initialization failed for all indices'
 
     def setup_info_layout(self):
-        self.info_layout = BoxLayout(orientation='vertical', padding=[10], size_hint=(0.3, 1), pos_hint={'right': 1})
-        self.info_layout.add_widget(self.info_label)
+        self.info_layout = BoxLayout(orientation='vertical', padding=[5],  size_hint=(0.3, 1), pos_hint={'right': 1})
         self.add_widget(self.info_layout)
 
     def update(self, dt):
-        image_texture, person_found = self.face_detector.live_comparison(self.resources.student_encodings, self.camera)
+        image_texture, person_found, consecutive_detections, confirmation_threshold  = self.face_detector.live_comparison(self.resources.student_encodings, self.camera)
         self.camera.texture = image_texture
         # AUTOMATIZAR ESTO CON UN FOR LOOP
         self.info_layout.clear_widgets()
-        self.info_layout.add_widget(Label(text=f'ID: {person_found["id"]} ', font_size=20))
-        self.info_layout.add_widget(Label(text=f'Name: {person_found["name"]} ', font_size=20))
-        self.info_layout.add_widget(Label(text=f'Grade: {person_found["grade"]} ', font_size=20))
+        if person_found != None:
+            self.info_layout.add_widget(Label(text=f'ID: {person_found["id"]} ', font_size=20))
+            self.info_layout.add_widget(Label(text=f'Name: {person_found["name"]} ', font_size=20))
+            self.info_layout.add_widget(Label(text=f'Grade: {person_found["grade"]} ', font_size=20))
+            self.info_layout.add_widget(Label(text=f"{consecutive_detections} / {confirmation_threshold}", font_size=25))
+
 
 
     def on_course_select(self, instance, value):

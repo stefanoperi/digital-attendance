@@ -33,7 +33,7 @@ class FaceDetector:
         faces = self.face_classifier.detectMultiScale(gray_image, 1.2, 5)
         return faces
     
-    def live_comparison(self, encodings_dict, student, kivy_camera):
+    def live_comparison(self, encodings_dict, kivy_camera):
         # Obtain frame data 
         frame_data = kivy_camera.texture
         frame_data = frame_data.pixels  
@@ -45,6 +45,8 @@ class FaceDetector:
         # Convert from RGBA to BGR (format used by OpenCV)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
 
+        unknown = "Unknown"
+        person_found = {"name": unknown, "id": unknown, "grade": unknown} 
         if frame is not None: 
             frame = cv2.resize(frame, (640, 480))
             frame = cv2.flip(frame, 1)
@@ -62,7 +64,7 @@ class FaceDetector:
                     found_encoding = face_recognition.face_encodings(face, known_face_locations=[(0, w, h, 0)])[0]
 
                     # Identify person based on the encoding found
-                    person_found, color = self.identify_person(encodings_dict, found_encoding, student)
+                    person_found, color = self.identify_person(encodings_dict, found_encoding, person_found)
                     self.draw_info(frame, x, y, w, h, person_found, color)
                     
                     # Confirm presence in Excel spreadsheet
@@ -87,12 +89,10 @@ class FaceDetector:
             image_texture = Texture.create(size=(frame.shape[1], frame.shape[0]), colorfmt='rgb')
             image_texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
 
-            return image_texture, person_found
+            return image_texture, person_found, self.consecutive_detections, self.confirmation_threshold
 
 
-    def identify_person(self, encodings_dict, actual_encoding):
-        unknown = "Unknown"
-        person_found = {"name": unknown, "id": unknown}
+    def identify_person(self, encodings_dict, actual_encoding, person_found):
         color = (0, 0, 250)  # Red
         
         # Compare detected face encodings with the list of encodings for each person in the database
@@ -126,7 +126,8 @@ class FaceDetector:
         if self.consecutive_detections >= self.confirmation_threshold:
             time_found = datetime.datetime.now()
             sheet_manager.register_presence(person_found, time_found)
-        
+            self.consecutive_detections = 0
+
          
 
 class PhotoCapturer:
