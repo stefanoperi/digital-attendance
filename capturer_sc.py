@@ -8,18 +8,22 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.floatlayout import FloatLayout
 
 import sys
+import cv2
 
 class CapturerScreen(FloatLayout):
     def __init__(self, main_screen, **kwargs):
         super().__init__(**kwargs)
         self.main_screen = main_screen
         self.photo_capturer = utils.PhotoCapturer()
-    
+        self.captured_photos = []
+        self.capture_pressed = False
     def on_enter(self):
         self.main_screen.camera_layout.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
         self.main_screen.camera_layout.size_hint = (0.9, 1)
         self.change_previous_layout()
-        self.setup_forms()
+        self.setup_components()
+        
+        
         Clock.schedule_interval(self.update, 1/30)
         
     def change_previous_layout(self):
@@ -27,9 +31,14 @@ class CapturerScreen(FloatLayout):
         self.main_screen.camera_layout.remove_widget(self.main_screen.button_layout)
         self.main_screen.camera_layout.remove_widget(self.main_screen.prompt_label)
     
-    def setup_forms(self):
+    def setup_components(self):
         input_layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
-        
+
+        # Capture button
+        self.capture_button = Button(text='Capture', pos_hint={'center_x': 0.5}, size_hint_x=0.5, size_hint_y=1.4)
+        self.capture_button.bind(on_press=self.start_capture, on_release=self.stop_capture)
+        input_layout.add_widget(self.capture_button)
+
         # Name input
         self.name_input = TextInput(hint_text='Name')
         input_layout.add_widget(Label(text='Name'))
@@ -48,11 +57,11 @@ class CapturerScreen(FloatLayout):
         # Action buttons
         action_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=None, height=50)
         
-        self.save_button = Button(text='Save', size_hint_x=0.2, width=50)
+        self.save_button = Button(text='Save', size_hint_x=0.2)
         self.save_button.bind(on_press=self.save_action)
         action_layout.add_widget(self.save_button)
 
-        self.cancel_button = Button(text='Cancel', size_hint_x=0.2, width=50)
+        self.cancel_button = Button(text='Cancel', size_hint_x=0.2)
         self.cancel_button.bind(on_press=self.cancel_action)
         action_layout.add_widget(self.cancel_button)
         
@@ -60,10 +69,25 @@ class CapturerScreen(FloatLayout):
         input_layout.add_widget(action_layout)
         self.main_screen.camera_layout.add_widget(input_layout)
 
+    def start_capture(self, instance):
+        self.capture_pressed = True
+
+    def stop_capture(self, instance):
+        self.capture_pressed= False
+
     def update(self, dt):
-       image_texture = self.photo_capturer.capture_photo(self.main_screen.camera)
+       image_texture, brightness = self.photo_capturer.capture_photo(self.main_screen.camera)
        self.main_screen.camera.texture = image_texture
-       
+       while self.capture_pressed and brightness  >=  50:
+         frame = utils.kivy_to_cv2(self.main_screen.camera)
+         self.captured_photos.append(frame)
+         print(len(self.captured_photos))
+         print("FOTO GUARDAAAAAAAAAAAAAAAAAAA")
+         if  len(self.captured_photos) > 100:
+             break
+
+
+
     def save_action(self, instance):
         # Handle the save action here
         name = self.name_input.text

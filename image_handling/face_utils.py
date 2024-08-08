@@ -148,9 +148,9 @@ class PhotoCapturer:
         frame = kivy_to_cv2(kivy_camera)
     
         # Capture photos from the camera with face detector display
-        captured_photos = []
         photo_count = 0
         photo_threshold = 100
+        brightness = None
 
         while photo_count < photo_threshold:
             frame = cv2.resize(frame, (640, 480))  
@@ -159,13 +159,8 @@ class PhotoCapturer:
             faces = self.face_detector.detect_faces(frame)
           
             for (x, y, w, h) in faces:
-                self.draw_info(frame, x, y, w, h, brightness)
-                key = cv2.waitKey(1)
-                if brightness >= 120 and key == 32:  # If "SPACE BAR" is pressed and Brightness
-                    captured_photos.append(frame.copy())
-                    photo_count += 1
-                    print("Photo taken\n")
-                print(f"Brightness: {brightness:.2f}  / 120 \n")    
+                self.draw_info(frame, x, y, w, h, brightness) 
+        
 
             # Convert CV2 modified image to a Kivy texture
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
@@ -176,8 +171,8 @@ class PhotoCapturer:
             image_texture = Texture.create(size=(frame.shape[1], frame.shape[0]), colorfmt='rgb')
             image_texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
 
-            return image_texture
-        
+            return image_texture, brightness
+   
     def draw_info(self, frame, x, y, w, h, brightness):
         color = (0, 0, 0)
         text = f"Brightness: {brightness}"
