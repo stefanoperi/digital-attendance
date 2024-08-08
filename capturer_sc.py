@@ -62,7 +62,8 @@ class CapturerScreen(FloatLayout):
 
     def update(self, dt):
        image_texture = self.photo_capturer.capture_photo(self.main_screen.camera)
-
+       self.main_screen.camera.texture = image_texture
+       
     def save_action(self, instance):
         # Handle the save action here
         name = self.name_input.text

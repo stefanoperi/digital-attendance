@@ -19,6 +19,7 @@ class MainScreen(FloatLayout):
         self.orientation = 'horizontal'  
         self.face_detector = utils.FaceDetector()
         self.update_event = None
+        self.camera_availability = False
 
         self.setup_ui()
         self.setup_camera_layout()
@@ -90,9 +91,9 @@ class MainScreen(FloatLayout):
             self.info_layout.add_widget(Label(text=f'Grade: {person_found["grade"]} ', font_size=20))
             self.info_layout.add_widget(Label(text=f"{consecutive_detections} / {confirmation_threshold}", font_size=25))
 
-
-
     def on_course_select(self, instance, value):
+
+        
         if self.update_event is not None:
             self.update_event.cancel()
         
@@ -105,6 +106,7 @@ class MainScreen(FloatLayout):
             self.update_event = Clock.schedule_interval(self.update, 1/30)
 
     def on_photos_select(self, instance):
+        
         self.clear_widgets()
         self.stop_update()
         self.add_widget(self.camera_layout)

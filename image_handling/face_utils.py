@@ -154,15 +154,12 @@ class PhotoCapturer:
 
         while photo_count < photo_threshold:
             frame = cv2.resize(frame, (640, 480))  
-            if not success:
-                raise RuntimeError("Error capturing frame")
-
             gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             brightness = cv2.mean(gray_frame)[0]
             faces = self.face_detector.detect_faces(frame)
           
             for (x, y, w, h) in faces:
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                self.draw_info(frame, x, y, w, h, brightness)
                 key = cv2.waitKey(1)
                 if brightness >= 120 and key == 32:  # If "SPACE BAR" is pressed and Brightness
                     captured_photos.append(frame.copy())
@@ -180,7 +177,16 @@ class PhotoCapturer:
             image_texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
 
             return image_texture
-     
+        
+    def draw_info(self, frame, x, y, w, h, brightness):
+        color = (0, 0, 0)
+        text = f"Brightness: {brightness}"
+        (text_width, text_height), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
+        x = frame.shape[1] - text_width - 10 
+        y = text_height + 10  
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        cv2.rectangle(frame, (x - 5, y - text_height - 5), (x + text_width + 5, y + 5), (0, 0, 0), cv2.FILLED)
+        cv2.putText(frame, text , (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
     
 
 
