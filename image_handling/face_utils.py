@@ -161,7 +161,6 @@ class PhotoCapturer:
             for (x, y, w, h) in faces:
                 self.draw_info(frame, x, y, w, h, brightness) 
         
-
             # Convert CV2 modified image to a Kivy texture
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
             frame = cv2.flip(frame, 0)  
@@ -174,7 +173,6 @@ class PhotoCapturer:
             return image_texture, brightness
    
     def draw_info(self, frame, x, y, w, h, brightness):
-        color = (0, 0, 0)
         text = f"Brightness: {brightness}"
         (text_width, text_height), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
         x = frame.shape[1] - text_width - 10 

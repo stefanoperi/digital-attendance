@@ -11,18 +11,19 @@ import sys
 import cv2
 
 class CapturerScreen(FloatLayout):
-    def __init__(self, main_screen, **kwargs):
+    def __init__(self, main_screen, resources, **kwargs):
         super().__init__(**kwargs)
         self.main_screen = main_screen
         self.photo_capturer = utils.PhotoCapturer()
-        self.captured_photos = []
         self.capture_pressed = False
+        self.resources = resources
+
     def on_enter(self):
         self.main_screen.camera_layout.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
         self.main_screen.camera_layout.size_hint = (0.9, 1)
         self.change_previous_layout()
         self.setup_components()
-        
+        self.captured_photos = []
         
         Clock.schedule_interval(self.update, 1/30)
         
@@ -39,6 +40,11 @@ class CapturerScreen(FloatLayout):
         self.capture_button.bind(on_press=self.start_capture, on_release=self.stop_capture)
         input_layout.add_widget(self.capture_button)
 
+        # ID input (only numbers)
+        self.id_input = TextInput(hint_text='ID', input_filter='int')
+        input_layout.add_widget(Label(text='ID'))
+        input_layout.add_widget(self.id_input) 
+
         # Name input
         self.name_input = TextInput(hint_text='Name')
         input_layout.add_widget(Label(text='Name'))
@@ -48,12 +54,12 @@ class CapturerScreen(FloatLayout):
         self.lastname_input = TextInput(hint_text='Last Name')
         input_layout.add_widget(Label(text='Last Name'))
         input_layout.add_widget(self.lastname_input)
+
+        # Grade input
+        self.grade_input = TextInput(hint_text='Grade')
+        input_layout.add_widget(Label(text='Grade'))
+        input_layout.add_widget(self.grade_input)
         
-        # ID input (only numbers)
-        self.id_input = TextInput(hint_text='ID', input_filter='int')
-        input_layout.add_widget(Label(text='ID'))
-        input_layout.add_widget(self.id_input) 
-            
         # Action buttons
         action_layout = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=None, height=50)
         
@@ -86,14 +92,13 @@ class CapturerScreen(FloatLayout):
          if  len(self.captured_photos) > 100:
              break
 
-
-
     def save_action(self, instance):
         # Handle the save action here
-        name = self.name_input.text
-        lastname = self.lastname_input.text
-        student_id = self.id_input.text
-        print(f"Saved: Name={name}, Last Name={lastname}, ID={student_id}")
+        student_registered = self.resources.Student(student_id=self.id_input.text, 
+                          full_name=self.name_input.text + self.lastname_input,
+                            grade=self.grade_input)
+        
+
         # Additional save logic goes here
 
     def cancel_action(self, instance):

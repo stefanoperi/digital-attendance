@@ -21,7 +21,7 @@ class DigitalAttendanceApp(App):
         
         # Create the capturer screen and add it to the ScreenManager
         capturer_screen = Screen(name='capturer')
-        capturer_screen_instance = CapturerScreen(main_screen=main_screen_widget)
+        capturer_screen_instance = CapturerScreen(main_screen=main_screen_widget, resources=resources)
         capturer_screen.add_widget(capturer_screen_instance)
         self.sm.add_widget(capturer_screen)
 
