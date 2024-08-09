@@ -175,12 +175,20 @@ class PhotoCapturer:
     def draw_info(self, frame, x, y, w, h, brightness):
         text = f"Brightness: {brightness}"
         (text_width, text_height), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
-        x = frame.shape[1] - text_width - 10 
-        y = text_height + 10  
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        cv2.rectangle(frame, (x - 5, y - text_height - 5), (x + text_width + 5, y + 5), (0, 0, 0), cv2.FILLED)
-        cv2.putText(frame, text , (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
-    
+        text_x = frame.shape[1] - text_width - 10  # Horizontal position of the text (right-aligned)
+        text_y = text_height + 10  # Vertical position of the text (top-aligned)
+
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2) # Draw face rectangle
+        
+        # Draw a rectangle just slightly larger than the text
+        cv2.rectangle(frame, 
+                    (text_x - 5, text_y - text_height - 5),  # Top-left corner of the rectangle
+                    (text_x + text_width + 5, text_y + 5),   # Bottom-right corner of the rectangle
+                    (0, 0, 0), 
+                    cv2.FILLED)
+
+        # Overlay the text on top of the rectangle
+        cv2.putText(frame, text , (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
 
 
 class FaceManager:

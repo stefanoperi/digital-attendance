@@ -110,7 +110,7 @@ class MainScreen(FloatLayout):
         self.clear_widgets()
         self.stop_update()
         self.add_widget(self.camera_layout)
-        capturer_screen = CapturerScreen(self)
+        capturer_screen = CapturerScreen(self, resources=self.resources)
         self.add_widget(capturer_screen)
         capturer_screen.on_enter()
 

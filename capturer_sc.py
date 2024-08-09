@@ -9,6 +9,7 @@ from kivy.uix.floatlayout import FloatLayout
 
 import sys
 import cv2
+import time
 
 class CapturerScreen(FloatLayout):
     def __init__(self, main_screen, resources, **kwargs):
@@ -51,7 +52,7 @@ class CapturerScreen(FloatLayout):
         input_layout.add_widget(self.name_input)
         
         # Last name input
-        self.lastname_input = TextInput(hint_text='Last Name')
+        self.lastname_input = TextInput(hint_text='Last Name', size_hint_y=1)
         input_layout.add_widget(Label(text='Last Name'))
         input_layout.add_widget(self.lastname_input)
 
@@ -84,13 +85,15 @@ class CapturerScreen(FloatLayout):
     def update(self, dt):
        image_texture, brightness = self.photo_capturer.capture_photo(self.main_screen.camera)
        self.main_screen.camera.texture = image_texture
-       while self.capture_pressed and brightness  >=  50:
+       while self.capture_pressed and brightness  >=  120:
          frame = utils.kivy_to_cv2(self.main_screen.camera)
          self.captured_photos.append(frame)
+   
          print(len(self.captured_photos))
          print("FOTO GUARDAAAAAAAAAAAAAAAAAAA")
          if  len(self.captured_photos) > 100:
              break
+           # ARREGLAR LO DE LAS 100 FOTOS 
 
     def save_action(self, instance):
         # Handle the save action here
