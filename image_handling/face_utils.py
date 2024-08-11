@@ -142,53 +142,86 @@ class PhotoCapturer:
     def __init__(self):
         self.face_detector = FaceDetector()
 
-    def capture_photo(self, kivy_camera):
+    def capture_photo(self, kivy_camera, photos_captured):
         
         # Convert kivy camera into compatible cv2 format
         frame = kivy_to_cv2(kivy_camera)
     
         # Capture photos from the camera with face detector display
-        photo_count = 0
-        photo_threshold = 100
+
+        self.photo_count = len(photos_captured)
+        self.photo_threshold = 50
         brightness = None
+        face_detected = False
 
-        while photo_count < photo_threshold:
-            frame = cv2.resize(frame, (640, 480))  
-            gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            brightness = cv2.mean(gray_frame)[0]
-            faces = self.face_detector.detect_faces(frame)
-          
-            for (x, y, w, h) in faces:
-                self.draw_info(frame, x, y, w, h, brightness) 
+        frame = cv2.resize(frame, (640, 480))  
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        brightness = cv2.mean(gray_frame)[0]
+        faces = self.face_detector.detect_faces(frame)
         
-            # Convert CV2 modified image to a Kivy texture
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
-            frame = cv2.flip(frame, 0)  
-            buf = frame.tobytes()  
+        for (x, y, w, h) in faces:
+            self.draw_info(frame, x, y, w, h, brightness) 
+            face_detected = True
 
-            # Create Kivy texture with image data
-            image_texture = Texture.create(size=(frame.shape[1], frame.shape[0]), colorfmt='rgb')
-            image_texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
+        # Convert CV2 modified image to a Kivy texture
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
+        frame = cv2.flip(frame, 0)  
+        buf = frame.tobytes()  
 
-            return image_texture, brightness
+        # Create Kivy texture with image data
+        image_texture = Texture.create(size=(frame.shape[1], frame.shape[0]), colorfmt='rgb')
+        image_texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
+
+        thresholds = {
+            "photo": self.photo_threshold, 
+            "brightness": self.brightness_threshold}
+      
+        return image_texture, brightness, face_detected, thresholds
    
     def draw_info(self, frame, x, y, w, h, brightness):
-        text = f"Brightness: {brightness}"
-        (text_width, text_height), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
-        text_x = frame.shape[1] - text_width - 10  # Horizontal position of the text (right-aligned)
-        text_y = text_height + 10  # Vertical position of the text (top-aligned)
-
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2) # Draw face rectangle
+        # Round the brightness value
+        brightness = round(brightness)
+        self.brightness_threshold = 100
         
-        # Draw a rectangle just slightly larger than the text
+        # Define the texts to be displayed
+        brightness_fraction = f"Brightness: {brightness} / {self.brightness_threshold}"
+        photo_text = f"Photos taken: {self.photo_count} / {self.photo_threshold}"
+        
+        # Determine text color based on brightness threshold
+        if brightness >= self.brightness_threshold:
+            text_color = (0, 255, 0)  # Green
+        else:
+            text_color = (0, 0, 255)  # Red
+        
+        # Calculate text size and positions
+        brightness_text_size, _ = cv2.getTextSize(brightness_fraction, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
+        photo_text_size, _ = cv2.getTextSize(photo_text, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
+        
+        # Define padding
+        padding = 5
+
+        # Compute the rectangle size
+        rect_width = max(brightness_text_size[0], photo_text_size[0]) + 2 * padding
+        rect_height = brightness_text_size[1] + photo_text_size[1] + 3 * padding
+        
+        # Position the rectangle and texts
+        text_x = frame.shape[1] - rect_width - padding
+        text_y = padding + brightness_text_size[1] + padding
+        
+        # Draw face rectangle
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        
+        # Draw background rectangle for text
         cv2.rectangle(frame, 
-                    (text_x - 5, text_y - text_height - 5),  # Top-left corner of the rectangle
-                    (text_x + text_width + 5, text_y + 5),   # Bottom-right corner of the rectangle
+                    (text_x - padding, text_y - padding), 
+                    (text_x + rect_width, text_y + rect_height), 
                     (0, 0, 0), 
                     cv2.FILLED)
+        
+        # Overlay the texts on top of the rectangle
+        cv2.putText(frame, brightness_fraction, (text_x, text_y + brightness_text_size[1] - padding), cv2.FONT_HERSHEY_SIMPLEX, 0.8, text_color, 2, cv2.LINE_AA)
+        cv2.putText(frame, photo_text, (text_x, text_y + brightness_text_size[1] + padding + photo_text_size[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
 
-        # Overlay the text on top of the rectangle
-        cv2.putText(frame, text , (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
 
 
 class FaceManager:

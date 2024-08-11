@@ -7,12 +7,6 @@ from image_handling import face_utils as utils
 from database import db_module 
 from spreadsheet import spreadsheet_module 
 
-class Student:
-    def __init__(self):
-        self.student_id = None
-        self.full_name = None
-        self.grade = None
-        self.encodings = None
         
 def get_valid_input(options, prompt):
     while True:
@@ -22,13 +16,7 @@ def get_valid_input(options, prompt):
         else:
             print(f"No spreadsheet is named {user_input}. The option {user_input} is not valid,  please try again.")
 
-def delete_faces_folder(student, face_manager):
-   try:
-        shutil.rmtree(f"{face_manager.faces_folder}/{str(student.full_name)}")
-   except FileNotFoundError as e:
-        print(f"No leftover photos to delete :)")
-   except OSError as e:
-        raise OSError(f"Error deleting folder: {e}")
+
 
 class AppResources():
     def __init__(self, **kwargs):
@@ -51,9 +39,8 @@ class AppResources():
 
         self.student_encodings = {}
         self.new_photos = None
-        self.last_registered_student = Student()
-
+     
         self.capturer = utils.PhotoCapturer()
-          
+
         self.sheet_manager = spreadsheet_module.GoogleSheetManager("Toma de Asistencia") # Open by the google spreadsheet's name
         self.worksheet_names = self.sheet_manager.read_worksheet_names() # Get course names

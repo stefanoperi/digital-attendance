@@ -1,4 +1,4 @@
-from image_handling import face_utils as utils
+
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
@@ -6,17 +6,66 @@ from kivy.uix.label import Label
 from kivy.clock import Clock
 from kivy.uix.textinput import TextInput
 from kivy.uix.floatlayout import FloatLayout
+from image_handling import face_utils as utils
+from kivy.uix.popup import Popup
 
 import sys
-import cv2
-import time
+import shutil
+
+class Student:
+    def __init__(self, student_id=None, full_name=None, grade=None, resources=None, show_popup=None):
+        self.student_id = student_id
+        self.full_name = full_name
+        self._grade = None  # Private attribute to store the actual grade value
+        self.resources = resources
+        self.grade = grade  # This will trigger the grade setter for validation
+        self.show_popup = show_popup  # Store reference to the popup function
+
+    @property
+    def grade(self):
+        return self._grade
+
+    @grade.setter
+    def grade(self, value):
+        # Validates that the grade is within the allowed worksheet names
+        if self.resources and value in self.resources.worksheet_names:
+            self._grade = value
+        else:
+            if self.show_popup:
+                self.show_popup("Invalid Grade", f"Invalid grade '{value}'. Must be one of {self.resources.worksheet_names}.")
+            else:
+                print(f"Invalid grade '{value}'. Must be one of {self.resources.worksheet_names}.")
+
+def delete_faces_folder(student, face_manager):
+   try:
+        shutil.rmtree(f"{face_manager.faces_folder}/{str(student.student_id)}")
+   except FileNotFoundError as e:
+        print(f"No leftover photos to delete :)")
+   except OSError as e:
+        raise OSError(f"Error deleting folder: {e}")
+   
+def show_popup(title, message):
+    layout = BoxLayout(orientation='vertical', padding=10)
+    label = Label(text=message, size_hint_y=None, height=44)
+    close_button = Button(text='Close', size_hint_y=None, height=50)
+    
+    layout.add_widget(label)
+    layout.add_widget(close_button)
+    
+    popup = Popup(title=title,
+                  content=layout,
+                  size_hint=(0.7, 0.4))
+    
+    close_button.bind(on_release=popup.dismiss)
+    popup.open()
 
 class CapturerScreen(FloatLayout):
     def __init__(self, main_screen, resources, **kwargs):
         super().__init__(**kwargs)
         self.main_screen = main_screen
-        self.photo_capturer = utils.PhotoCapturer()
+        self.photo_capturer = resources.capturer
         self.capture_pressed = False
+        self.photos_taken = False
         self.resources = resources
 
     def on_enter(self):
@@ -83,23 +132,39 @@ class CapturerScreen(FloatLayout):
         self.capture_pressed= False
 
     def update(self, dt):
-       image_texture, brightness = self.photo_capturer.capture_photo(self.main_screen.camera)
+       image_texture, brightness, face_detected, thresholds = self.photo_capturer.capture_photo(self.main_screen.camera, self.captured_photos)
        self.main_screen.camera.texture = image_texture
-       while self.capture_pressed and brightness  >=  120:
-         frame = utils.kivy_to_cv2(self.main_screen.camera)
-         self.captured_photos.append(frame)
-   
-         print(len(self.captured_photos))
-         print("FOTO GUARDAAAAAAAAAAAAAAAAAAA")
-         if  len(self.captured_photos) > 100:
+       while self.capture_pressed and brightness  >=  90 and face_detected:
+        if  len(self.captured_photos) >= thresholds["photo"]:
+             self.photos_taken = True
              break
-           # ARREGLAR LO DE LAS 100 FOTOS 
+        
+        frame = utils.kivy_to_cv2(self.main_screen.camera)
+        self.captured_photos.append(frame)
+         
+        self.capture_pressed = False
+        # ARREGLAR LO DE LAS 100 FOTOS 
 
     def save_action(self, instance):
-        # Handle the save action here
-        student_registered = self.resources.Student(student_id=self.id_input.text, 
-                          full_name=self.name_input.text + self.lastname_input,
-                            grade=self.grade_input)
+
+        # Check that attributes are not None or empty
+        if self.id_input.text and self.name_input.text and self.lastname_input.text and self.grade_input.text:
+            student_registered = Student(
+            student_id=self.id_input.text, 
+            full_name=self.name_input.text + " " + self.lastname_input.text,
+            grade=self.grade_input.text,
+            resources=self.resources)
+
+            if self.photos_taken:
+                # Ensure to delete remaining photos before adding new ones
+                delete_faces_folder(student_registered, self.resources.face_manager)
+
+                self.resources.face_manager.save_faces(student_registered, self.captured_photos)
+                student_encodings = self.resources.face_manager.encode_faces(self.resources.faces_path, student_registered)
+            else:
+                    print("More photos are needed to proceed")
+        else:
+            print("Please fill in all fields")
         
 
         # Additional save logic goes here
@@ -107,3 +172,4 @@ class CapturerScreen(FloatLayout):
     def cancel_action(self, instance):
         sys.exit(0)
         # Additional cancel logic goes here
+
