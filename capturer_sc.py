@@ -7,19 +7,18 @@ from kivy.clock import Clock
 from kivy.uix.textinput import TextInput
 from kivy.uix.floatlayout import FloatLayout
 from image_handling import face_utils as utils
-from kivy.uix.popup import Popup
 
 import sys
 import shutil
 
+    
 class Student:
-    def __init__(self, student_id=None, full_name=None, grade=None, resources=None, show_popup=None):
+    def __init__(self, student_id=None, full_name=None, grade=None, resources=None, ):
         self.student_id = student_id
         self.full_name = full_name
         self._grade = None  # Private attribute to store the actual grade value
         self.resources = resources
         self.grade = grade  # This will trigger the grade setter for validation
-        self.show_popup = show_popup  # Store reference to the popup function
 
     @property
     def grade(self):
@@ -31,10 +30,7 @@ class Student:
         if self.resources and value in self.resources.worksheet_names:
             self._grade = value
         else:
-            if self.show_popup:
-                self.show_popup("Invalid Grade", f"Invalid grade '{value}'. Must be one of {self.resources.worksheet_names}.")
-            else:
-                print(f"Invalid grade '{value}'. Must be one of {self.resources.worksheet_names}.")
+            print(f"Invalid grade '{value}'. Must be one of {self.resources.worksheet_names}.")
 
 def delete_faces_folder(student, face_manager):
    try:
@@ -43,21 +39,7 @@ def delete_faces_folder(student, face_manager):
         print(f"No leftover photos to delete :)")
    except OSError as e:
         raise OSError(f"Error deleting folder: {e}")
-   
-def show_popup(title, message):
-    layout = BoxLayout(orientation='vertical', padding=10)
-    label = Label(text=message, size_hint_y=None, height=44)
-    close_button = Button(text='Close', size_hint_y=None, height=50)
-    
-    layout.add_widget(label)
-    layout.add_widget(close_button)
-    
-    popup = Popup(title=title,
-                  content=layout,
-                  size_hint=(0.7, 0.4))
-    
-    close_button.bind(on_release=popup.dismiss)
-    popup.open()
+
 
 class CapturerScreen(FloatLayout):
     def __init__(self, main_screen, resources, **kwargs):
