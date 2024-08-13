@@ -11,7 +11,7 @@ from kivy.uix.popup import Popup
 
 import sys
 import shutil
-
+import cv2
     
 class Student:
     def __init__(self, student_id=None, full_name=None, grade=None, resources=None, ):
@@ -30,8 +30,8 @@ class Student:
         # Validates that the grade is within the allowed worksheet names
         if self.resources and value in self.resources.worksheet_names:
             self._grade = value
-        else:
-            self.resources.show_popup(f"Invalid grade '{value}'. Must be one of {self.resources.worksheet_names}.")
+        else:     
+            raise ValueError(self.resources.show_popup(f"Invalid grade '{value}'. Must be one of {self.resources.worksheet_names}."))
 
 def delete_faces_folder(student, face_manager):
    try:
@@ -48,7 +48,7 @@ class CapturerScreen(FloatLayout):
         self.main_screen = main_screen
         self.photo_capturer = resources.capturer
         self.capture_pressed = False
-        self.photos_taken = False
+        self.photos_exist = False
         self.resources = resources
 
     def on_enter(self):
@@ -117,41 +117,49 @@ class CapturerScreen(FloatLayout):
     def update(self, dt):
        image_texture, brightness, face_detected, thresholds = self.photo_capturer.capture_photo(self.main_screen.camera, self.captured_photos)
        self.main_screen.camera.texture = image_texture
-       while self.capture_pressed and brightness  >=  90 and face_detected:
+       while self.capture_pressed and brightness  >=  thresholds["brightness"] and face_detected:
         if  len(self.captured_photos) >= thresholds["photo"]:
-             self.photos_taken = True
+             self.photos_exist = True
              break
         
         frame = utils.kivy_to_cv2(self.main_screen.camera)
         self.captured_photos.append(frame)
          
         self.capture_pressed = False
-        # ARREGLAR LO DE LAS 100 FOTOS 
+      
 
     def save_action(self, instance):
 
         # Check that attributes are not None or empty
-        if self.id_input.text and self.name_input.text and self.lastname_input.text and self.grade_input.text:
-            student_registered = Student(
-            student_id=self.id_input.text, 
-            full_name=self.name_input.text + " " + self.lastname_input.text,
-            grade=self.grade_input.text,
-            resources=self.resources)
-
-            if self.photos_taken:
-                # Ensure to delete remaining photos before adding new ones
-                delete_faces_folder(student_registered, self.resources.face_manager)
-                
-                popup = self.resources.show_popup("Processing information, this may take a moment. Do not close the application", "Warning")    
-                self.resources.face_manager.save_faces(student_registered, self.captured_photos)
-                student_encodings = self.resources.face_manager.encode_faces(self.resources.faces_path, student_registered)
-                if student_encodings:
-                    popup.dismiss()
-                    self.resources.show_popup("Information processed succesfully", "Success")
+        try:
+            if self.id_input.text and self.name_input.text and self.lastname_input.text and self.grade_input.text:
+                student_registered = Student(
+                student_id=self.id_input.text, 
+                full_name=self.name_input.text + " " + self.lastname_input.text,
+                grade=self.grade_input.text,
+                resources=self.resources)
             else:
-                    self.resources.show_popup("More photos are needed to proceed")
-        else:
-            self.resources.show_popup("Please fill correctly all fields")
+                raise ValueError(self.resources.show_popup("Please fill correctly all fields"))
+        except Exception:
+            return 
+        print("no hay fotos")
+        if self.photos_exist:
+            print("hay fotos")
+            for img in self.captured_photos:
+                print(f"LEN: {len(self.captured_photos)}")
+                cv2.imshow("ImAGE PREVIEW",img)
+            # Ensure to delete remaining photos before adding new ones
+          #  delete_faces_folder(student_registered, self.resources.face_manager)
+            
+            # opup = self.resources.show_popup("Processing information, this may take a moment. Do not close the application", "Warning")    
+           # success = self.resources.face_manager.save_faces(student_registered, self.captured_photos)
+            #student_encodings = self.resources.face_manager.encode_faces(self.resources.faces_path, student_registered)
+            #if student_encodings:
+                # popup.dismiss()
+                #   self.resources.show_popup("Information processed succesfully", "Success")
+        #else:
+            #       self.resources.show_popup("More photos are needed to proceed")
+   
         
         # Additional save logic goes here
 

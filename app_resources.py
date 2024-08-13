@@ -19,7 +19,7 @@ def get_valid_input(options, prompt):
             print(f"No spreadsheet is named {user_input}. The option {user_input} is not valid,  please try again.")
 
 
-def show_popup(message, type="Error"):
+def show_popup(message, type="Error", auto_dismis=True):
     # Calculate the size of the text
 
     label = CoreLabel(text=message, font_size=20)
@@ -37,7 +37,7 @@ def show_popup(message, type="Error"):
     # Create the popup with the label as content
     popup = Popup(title=type,
                   content=content,
-                  auto_dismiss=False,
+                  auto_dismiss=auto_dismis,
                   size_hint=(None, None),
                   size=(popup_width, popup_height))
     
