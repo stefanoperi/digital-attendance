@@ -7,6 +7,7 @@ from kivy.clock import Clock
 from kivy.uix.textinput import TextInput
 from kivy.uix.floatlayout import FloatLayout
 from image_handling import face_utils as utils
+from kivy.uix.popup import Popup
 
 import sys
 import shutil
@@ -30,7 +31,7 @@ class Student:
         if self.resources and value in self.resources.worksheet_names:
             self._grade = value
         else:
-            print(f"Invalid grade '{value}'. Must be one of {self.resources.worksheet_names}.")
+            self.resources.show_popup(f"Invalid grade '{value}'. Must be one of {self.resources.worksheet_names}.")
 
 def delete_faces_folder(student, face_manager):
    try:
@@ -89,7 +90,7 @@ class CapturerScreen(FloatLayout):
 
         # Grade input
         self.grade_input = TextInput(hint_text='Grade')
-        input_layout.add_widget(Label(text='Grade'))
+        input_layout.add_widget(Label(text=f'Grade (Available courses: {self.resources.worksheet_names}'))
         input_layout.add_widget(self.grade_input)
         
         # Action buttons
@@ -140,18 +141,22 @@ class CapturerScreen(FloatLayout):
             if self.photos_taken:
                 # Ensure to delete remaining photos before adding new ones
                 delete_faces_folder(student_registered, self.resources.face_manager)
-
+                
+                popup = self.resources.show_popup("Processing information, this may take a moment. Do not close the application", "Warning")    
                 self.resources.face_manager.save_faces(student_registered, self.captured_photos)
                 student_encodings = self.resources.face_manager.encode_faces(self.resources.faces_path, student_registered)
+                if student_encodings:
+                    popup.dismiss()
+                    self.resources.show_popup("Information processed succesfully", "Success")
             else:
-                    print("More photos are needed to proceed")
+                    self.resources.show_popup("More photos are needed to proceed")
         else:
-            print("Please fill in all fields")
+            self.resources.show_popup("Please fill correctly all fields")
         
-
         # Additional save logic goes here
 
     def cancel_action(self, instance):
         sys.exit(0)
         # Additional cancel logic goes here
 
+ 

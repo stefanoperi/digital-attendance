@@ -150,17 +150,18 @@ class PhotoCapturer:
         # Capture photos from the camera with face detector display
 
         self.photo_count = len(photos_captured)
-        self.photo_threshold = 50
-        brightness = None
+        self.photo_threshold = 10
+        self.brightness = None
+        self.brightness_threshold = 100
         face_detected = False
 
         frame = cv2.resize(frame, (640, 480))  
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        brightness = cv2.mean(gray_frame)[0]
+        self.brightness = cv2.mean(gray_frame)[0]
         faces = self.face_detector.detect_faces(frame)
         
         for (x, y, w, h) in faces:
-            self.draw_info(frame, x, y, w, h, brightness) 
+            self.draw_info(frame, x, y, w, h) 
             face_detected = True
 
         # Convert CV2 modified image to a Kivy texture
@@ -176,19 +177,18 @@ class PhotoCapturer:
             "photo": self.photo_threshold, 
             "brightness": self.brightness_threshold}
       
-        return image_texture, brightness, face_detected, thresholds
+        return image_texture, self.brightness, face_detected, thresholds
    
-    def draw_info(self, frame, x, y, w, h, brightness):
+    def draw_info(self, frame, x, y, w, h):
         # Round the brightness value
-        brightness = round(brightness)
-        self.brightness_threshold = 100
+        self.brightness = round(self.brightness)
         
         # Define the texts to be displayed
-        brightness_fraction = f"Brightness: {brightness} / {self.brightness_threshold}"
+        brightness_fraction = f"Brightness: {self.brightness} / {self.brightness_threshold}"
         photo_text = f"Photos taken: {self.photo_count} / {self.photo_threshold}"
         
         # Determine text color based on brightness threshold
-        if brightness >= self.brightness_threshold:
+        if self.brightness >= self.brightness_threshold:
             text_color = (0, 255, 0)  # Green
         else:
             text_color = (0, 0, 255)  # Red
@@ -229,11 +229,13 @@ class FaceManager:
     def __init__(self):
         self.face_detector = FaceDetector()
         self.faces_folder = "image_handling/faces"
+        
 
     def save_faces(self, student, images):    
         # Save face images in a folder assigned to the captured user    
 
         # Path of the folder where the user's face images will be saved
+        success = False
         folder_path = os.path.join(self.faces_folder, student.full_name)
         try:
             if not os.path.exists(folder_path):
@@ -251,6 +253,9 @@ class FaceManager:
                     cv2.imwrite(os.path.join(folder_path, f"{student.full_name}_{count}.jpg"), face_area)
                     count += 1
                     print("Face image saved")
+
+            success = True
+            return success
                     
         except Exception as e:
             print(f"Error saving images: {e}")
