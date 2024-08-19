@@ -2,6 +2,7 @@
 import os
 import shutil
 import numpy as np
+import logging
 
 from image_handling import face_utils as utils
 from database import db_module 
@@ -9,14 +10,7 @@ from spreadsheet import spreadsheet_module
 from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 from kivy.core.text import Label as CoreLabel
-        
-def get_valid_input(options, prompt):
-    while True:
-        user_input = input(prompt).strip()
-        if user_input in options:
-            return user_input
-        else:
-            print(f"No spreadsheet is named {user_input}. The option {user_input} is not valid,  please try again.")
+
 
 
 def show_popup(message, type="Error", auto_dismis=True):
@@ -44,6 +38,7 @@ def show_popup(message, type="Error", auto_dismis=True):
     # Open the popup
     popup.open()
     return popup
+
 
 class AppResources():
     def __init__(self, **kwargs):

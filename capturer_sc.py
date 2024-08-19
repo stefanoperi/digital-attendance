@@ -12,6 +12,8 @@ from kivy.uix.popup import Popup
 import sys
 import shutil
 import cv2
+import os
+import logging
     
 class Student:
     def __init__(self, student_id=None, full_name=None, grade=None, resources=None, ):
@@ -33,13 +35,7 @@ class Student:
         else:     
             raise ValueError(self.resources.show_popup(f"Invalid grade '{value}'. Must be one of {self.resources.worksheet_names}."))
 
-def delete_faces_folder(student, face_manager):
-   try:
-        shutil.rmtree(f"{face_manager.faces_folder}/{str(student.student_id)}")
-   except FileNotFoundError as e:
-        print(f"No leftover photos to delete :)")
-   except OSError as e:
-        raise OSError(f"Error deleting folder: {e}")
+
 
 
 class CapturerScreen(FloatLayout):
@@ -50,13 +46,18 @@ class CapturerScreen(FloatLayout):
         self.capture_pressed = False
         self.photos_exist = False
         self.resources = resources
+          
+        if not os.path.exists("image_handling/raw_images"):
+            os.makedirs("image_handling/raw_images")
+            print("New folder: raw_images")
+        self.raw_images_folder = "image_handling/raw_images/"
 
     def on_enter(self):
         self.main_screen.camera_layout.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
         self.main_screen.camera_layout.size_hint = (0.9, 1)
         self.change_previous_layout()
         self.setup_components()
-        self.captured_photos = []
+        self.photo_count = 0
         
         Clock.schedule_interval(self.update, 1/30)
         
@@ -115,16 +116,18 @@ class CapturerScreen(FloatLayout):
         self.capture_pressed= False
 
     def update(self, dt):
-       image_texture, brightness, face_detected, thresholds = self.photo_capturer.capture_photo(self.main_screen.camera, self.captured_photos)
+       image_texture, brightness, face_detected, thresholds = self.photo_capturer.capture_photo(self.main_screen.camera, self.photo_count)
        self.main_screen.camera.texture = image_texture
        while self.capture_pressed and brightness  >=  thresholds["brightness"] and face_detected:
-        if  len(self.captured_photos) >= thresholds["photo"]:
+        if  self.photo_count >= thresholds["photo"]:
              self.photos_exist = True
              break
         
         frame = utils.kivy_to_cv2(self.main_screen.camera)
-        self.captured_photos.append(frame)
-         
+        if frame is not None:
+            self.photo_count += 1
+            cv2.imwrite(self.raw_images_folder + str(self.photo_count) + ".jpg", cv2.flip(frame, 0))
+
         self.capture_pressed = False
       
 
@@ -142,17 +145,25 @@ class CapturerScreen(FloatLayout):
                 raise ValueError(self.resources.show_popup("Please fill correctly all fields"))
         except Exception:
             return 
-        print("no hay fotos")
-        if self.photos_exist:
-            print("hay fotos")
-            for img in self.captured_photos:
-                print(f"LEN: {len(self.captured_photos)}")
-                cv2.imshow("ImAGE PREVIEW",img)
-            # Ensure to delete remaining photos before adding new ones
-          #  delete_faces_folder(student_registered, self.resources.face_manager)
-            
+
+        # Delete previous residual face photos
+        student_faces_path = os.path.join(self.resources.face_manager.faces_folder, student_registered.student_id)
+        try:
+            shutil.rmtree(f"{student_faces_path}")
+        except FileNotFoundError as e:
+            logging.info(f"No residual photos were found for deletion")
+        except OSError as e:
+            logging.error(f"Error deleting folder: {e}")
+            raise
+
+        # Save new face photos
+        success = self.resources.face_manager.save_faces(student_registered, self.raw_images_folder, student_faces_path)  
+
+
+
+
             # opup = self.resources.show_popup("Processing information, this may take a moment. Do not close the application", "Warning")    
-           # success = self.resources.face_manager.save_faces(student_registered, self.captured_photos)
+          
             #student_encodings = self.resources.face_manager.encode_faces(self.resources.faces_path, student_registered)
             #if student_encodings:
                 # popup.dismiss()

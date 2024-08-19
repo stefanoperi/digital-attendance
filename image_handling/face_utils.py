@@ -6,6 +6,7 @@ from database import db_module
 import numpy as np
 import time
 import datetime
+import logging
 from kivy.graphics.texture import Texture
 
 db_directory = "database"
@@ -21,10 +22,14 @@ db_manager.connect()
 sheet_manager = spreadsheet_module.GoogleSheetManager('Toma de Asistencia') # Open by the name of the google spreadsheet
 
 def kivy_to_cv2(kivy_camera):
-    # Obtain frame data 
-    frame_data = kivy_camera.texture
-    frame_data = frame_data.pixels  
-    
+    # Ensure texture is valid and retrieve pixel data
+    if kivy_camera.texture:
+        frame_data = kivy_camera.texture.pixels
+        if isinstance(frame_data, memoryview):
+            frame_data = bytes(frame_data)
+    else:
+        raise ValueError("No valid texture found in the Kivy camera object.")
+
     # Convert frame data to numpy array
     buf1 = np.frombuffer(frame_data, dtype=np.uint8)
 
@@ -34,6 +39,7 @@ def kivy_to_cv2(kivy_camera):
     # Convert from RGBA to BGR (format used by OpenCV)
     frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2BGR)
     return frame
+
 
 class FaceDetector:
     def __init__(self):
@@ -142,14 +148,14 @@ class PhotoCapturer:
     def __init__(self):
         self.face_detector = FaceDetector()
 
-    def capture_photo(self, kivy_camera, photos_captured):
+    def capture_photo(self, kivy_camera, photo_count):
         
         # Convert kivy camera into compatible cv2 format
         frame = kivy_to_cv2(kivy_camera)
     
         # Capture photos from the camera with face detector display
 
-        self.photo_count = len(photos_captured)
+        self.photo_count = photo_count
         self.photo_threshold = 10
         self.brightness = None
         self.brightness_threshold = 100
@@ -231,30 +237,42 @@ class FaceManager:
         self.faces_folder = "image_handling/faces"
         
 
-    def save_faces(self, student, images):    
+    def save_faces(self, student, images_folder, student_faces_path):    
         # Save face images in a folder assigned to the captured user    
-
-        # Path of the folder where the user's face images will be saved
         success = False
-        folder_path = os.path.join(self.faces_folder, student.full_name)
+        
         try:
-            if not os.path.exists(folder_path):
-                os.makedirs(folder_path)
-                print(f"New folder created: {student.full_name}")
+            if not os.path.exists(student_faces_path):
+                os.makedirs(student_faces_path)
+                logging.info(f"New folder created: {student.full_name}")
             else:
-                print(f"A directory with the name {student.full_name} already exists")
+                logging.info(f"A directory with the name {student.full_name} already exists")
                 
-            count = len(os.listdir(folder_path)) + 1
+            count = len(os.listdir(student_faces_path)) + 1
+
             # Iterate over images and save the face section of each one
-            for image in images:
+            for image_filename in os.listdir(images_folder):
+                image_path = os.path.join(images_folder, image_filename)
+                image = cv2.imread(image_path)
+            
+                if image is None:
+                    logging.warning(f"Failed to load image: {image_path}")
+                    continue
+
                 face_detected = self.face_detector.detect_faces(image)
                 for (x, y ,w , h) in face_detected:
                     face_area = image[y:y + h, x:x + w]
-                    cv2.imwrite(os.path.join(folder_path, f"{student.full_name}_{count}.jpg"), face_area)
+                    cv2.imwrite(os.path.join(student_faces_path, f"{student.full_name}_{count}.jpg"), face_area)
                     count += 1
-                    print("Face image saved")
+                    logging.info("Face image saved")
 
+            # Remove residual raw images
+            for file in os.listdir(images_folder):
+                os.remove(os.path.join(images_folder, file))
+
+            logging.info("All face images were saved")
             success = True
+
             return success
                     
         except Exception as e:
