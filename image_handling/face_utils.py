@@ -280,8 +280,8 @@ class FaceManager:
     
     def encode_faces(self, faces_path, student):
         encodings_dict = {}
-        # Iterate over each user's folder
         count = 0
+        # Iterate over each user's folder
         for user_folder in os.listdir(faces_path):
             user_faces_path = os.path.join(faces_path, user_folder)
 
@@ -296,10 +296,9 @@ class FaceManager:
         
                 f_coding = face_recognition.face_encodings(image, known_face_locations = [(0, 150, 150, 0)])[0]
                 person_encodings.append(f_coding)
-                print(f"Face encoded number: {count}")
+                logging.info(f"Face encoded number: {count}")
                 count += 1
                 
-
             # Add the person's face encodings list to the dictionary
             if person_encodings:
                 encodings_dict[student.student_id] = person_encodings

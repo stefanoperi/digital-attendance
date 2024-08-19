@@ -14,6 +14,7 @@ import shutil
 import cv2
 import os
 import logging
+import time
     
 class Student:
     def __init__(self, student_id=None, full_name=None, grade=None, resources=None, ):
@@ -156,20 +157,11 @@ class CapturerScreen(FloatLayout):
             logging.error(f"Error deleting folder: {e}")
             raise
 
-        # Save new face photos
-        success = self.resources.face_manager.save_faces(student_registered, self.raw_images_folder, student_faces_path)  
-
-
-
-
-            # opup = self.resources.show_popup("Processing information, this may take a moment. Do not close the application", "Warning")    
-          
-            #student_encodings = self.resources.face_manager.encode_faces(self.resources.faces_path, student_registered)
-            #if student_encodings:
-                # popup.dismiss()
-                #   self.resources.show_popup("Information processed succesfully", "Success")
-        #else:
-            #       self.resources.show_popup("More photos are needed to proceed")
+       
+        self.resources.face_manager.save_faces(student_registered, self.raw_images_folder, student_faces_path)  
+        student_encodings = self.resources.face_manager.encode_faces(self.resources.faces_path, student_registered)
+        if student_encodings:
+            self.resources.show_popup("Save person's data in the database?", add_yes_no_buttons=True)
    
         
         # Additional save logic goes here
