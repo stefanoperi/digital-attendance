@@ -37,8 +37,6 @@ class Student:
             raise ValueError(self.resources.show_popup(f"Invalid grade '{value}'. Must be one of {self.resources.worksheet_names}."))
 
 
-
-
 class CapturerScreen(FloatLayout):
     def __init__(self, main_screen, resources, **kwargs):
         super().__init__(**kwargs)
@@ -137,7 +135,7 @@ class CapturerScreen(FloatLayout):
         # Check that attributes are not None or empty
         try:
             if self.id_input.text and self.name_input.text and self.lastname_input.text and self.grade_input.text:
-                student_registered = Student(
+                self.student_registered = Student(
                 student_id=self.id_input.text, 
                 full_name=self.name_input.text + " " + self.lastname_input.text,
                 grade=self.grade_input.text,
@@ -148,7 +146,7 @@ class CapturerScreen(FloatLayout):
             return 
 
         # Delete previous residual face photos
-        student_faces_path = os.path.join(self.resources.face_manager.faces_folder, student_registered.student_id)
+        student_faces_path = os.path.join(self.resources.face_manager.faces_folder, self.student_registered.student_id)
         try:
             shutil.rmtree(f"{student_faces_path}")
         except FileNotFoundError as e:
@@ -157,17 +155,34 @@ class CapturerScreen(FloatLayout):
             logging.error(f"Error deleting folder: {e}")
             raise
 
-       
-        self.resources.face_manager.save_faces(student_registered, self.raw_images_folder, student_faces_path)  
-        student_encodings = self.resources.face_manager.encode_faces(self.resources.faces_path, student_registered)
-        if student_encodings:
-            self.resources.show_popup("Save person's data in the database?", add_yes_no_buttons=True)
-   
-        
-        # Additional save logic goes here
+        self.resources.face_manager.save_faces(self.student_registered, self.raw_images_folder, student_faces_path)  
+        self.student_encodings = self.resources.face_manager.encode_faces(self.resources.faces_path, self.student_registered)
+        if self.student_encodings:
+            self.resources.show_popup("Save person's data in the database?", 
+                                      type="Info",
+                                      add_yes_no_buttons=True,
+                                      auto_dismis=False,
+                                      on_yes=self.save_to_database,
+                                      on_no=self.cancel_action)
 
-    def cancel_action(self, instance):
+    def save_to_database(self):
+        for student_id, encodings in self.student_encodings.items():
+                for encoding in encodings:
+                    self.resources.db_manager.insert_encoding(self.student_registered, encoding.tobytes())
+
+        self.resources.db_manager.close()
+        self.resources.sheet_manager.select_grade(self.student_registered.grade)
+        self.resources.sheet_manager.add_student(self.student_registered)
+        self.resources.show_popup("Data successfully saved to the database.", "Info")
+        time.sleep(3)
+        self.cancel_action()
+
+    def cancel_action(self):
+        # Remove residual raw photos and quit
+        for filename in os.listdir(self.raw_images_folder):
+              os.remove(os.path.join(self.raw_images_folder, filename))
+
         sys.exit(0)
-        # Additional cancel logic goes here
+
 
  

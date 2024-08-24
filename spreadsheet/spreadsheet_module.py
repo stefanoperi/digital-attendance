@@ -5,6 +5,7 @@ import time
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 from gspread.exceptions import APIError
+import logging
 
 
 class GoogleSheetManager:
@@ -58,7 +59,7 @@ class GoogleSheetManager:
                     break
                 except APIError as e:
                     if 'quota' in str(e).lower():
-                        print("Cuota superada, esperando para reintentar...")
+                        logging.info("Quota exceeded, waiting to retry...")
                         time.sleep(self.retry_delay)
                     else:
                         raise e

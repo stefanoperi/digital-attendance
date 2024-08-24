@@ -42,7 +42,7 @@ class AppResources():
         self.worksheet_names = self.sheet_manager.read_worksheet_names() # Get course names
 
 
-def show_popup(message, type="Error", auto_dismis=True, add_yes_no_buttons=False):
+def show_popup(message, type="Error", auto_dismis=True, add_yes_no_buttons=False, on_yes=None, on_no=None):
     # Calculate the size of the text
     label = CoreLabel(text=message, font_size=20)
     label.refresh()
@@ -75,7 +75,13 @@ def show_popup(message, type="Error", auto_dismis=True, add_yes_no_buttons=False
         
         # Adjust popup height to accommodate the buttons
         popup_height += 50 + padding
-    
+        
+        # Bind the buttons to the provided callbacks
+        if on_yes:
+            yes_button.bind(on_press=lambda *args: (on_yes(), popup.dismiss()))
+        if on_no:
+            no_button.bind(on_press=lambda *args: (on_no(), popup.dismiss()))
+
     # Create the popup with the layout as content
     popup = Popup(title=type,
                   content=layout,
