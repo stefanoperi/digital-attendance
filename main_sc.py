@@ -87,13 +87,11 @@ class MainScreen(FloatLayout):
         self.info_layout.clear_widgets()
         if person_found != None:
             self.info_layout.add_widget(Label(text=f'ID: {person_found["id"]} ', font_size=20))
-            self.info_layout.add_widget(Label(text=f'Name: {person_found["name"]} ', font_size=20))
             self.info_layout.add_widget(Label(text=f'Grade: {person_found["grade"]} ', font_size=20))
             self.info_layout.add_widget(Label(text=f"{consecutive_detections} / {confirmation_threshold}", font_size=25))
+            self.info_layout.add_widget(Label(text=f'Name:\n {person_found["name"]} ', font_size=20))
 
     def on_course_select(self, instance, value):
-
-        
         if self.update_event is not None:
             self.update_event.cancel()
         

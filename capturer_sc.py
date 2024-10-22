@@ -119,8 +119,8 @@ class CapturerScreen(FloatLayout):
        self.main_screen.camera.texture = image_texture
        while self.capture_pressed and brightness  >=  thresholds["brightness"] and face_detected:
         if  self.photo_count >= thresholds["photo"]:
-             self.photos_exist = True
-             break
+            self.photos_exist = True
+            break
         
         frame = utils.kivy_to_cv2(self.main_screen.camera)
         if frame is not None:
@@ -146,15 +146,17 @@ class CapturerScreen(FloatLayout):
             return 
 
         # Delete previous residual face photos
-        student_faces_path = os.path.join(self.resources.face_manager.faces_folder, self.student_registered.student_id)
+   
         try:
-            shutil.rmtree(f"{student_faces_path}")
+            shutil.rmtree(self.resources.face_manager.faces_folder)
+            os.makedirs(self.resources.face_manager.faces_folder)
         except FileNotFoundError as e:
             logging.info(f"No residual photos were found for deletion")
         except OSError as e:
             logging.error(f"Error deleting folder: {e}")
             raise
-
+        
+        student_faces_path = os.path.join(self.resources.face_manager.faces_folder, self.student_registered.student_id)
         self.resources.face_manager.save_faces(self.student_registered, self.raw_images_folder, student_faces_path)  
         self.student_encodings = self.resources.face_manager.encode_faces(self.resources.faces_path, self.student_registered)
         if self.student_encodings:

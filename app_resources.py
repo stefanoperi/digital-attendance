@@ -31,9 +31,9 @@ class AppResources():
         self.db_manager = db_module.DatabaseManager(db_path)
         self.db_manager.connect()
         self.db_manager.create_table()
-
-        self.student_encodings = {}
-        self.new_photos = None
+        self.student_encodings = self.db_manager.cursor.execute("SELECT student_id, encoding FROM encodings")
+        self.student_encodings = self.db_manager.cursor.fetchall() # Formatted in rows of tuples
+     
      
         self.capturer = utils.PhotoCapturer()
         self.show_popup = show_popup

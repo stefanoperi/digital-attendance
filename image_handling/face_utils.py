@@ -8,6 +8,7 @@ import time
 import datetime
 import logging
 from kivy.graphics.texture import Texture
+import random
 
 db_directory = "database"
 db_file = "encodings.db"
@@ -44,9 +45,10 @@ def kivy_to_cv2(kivy_camera):
 class FaceDetector:
     def __init__(self):
         self.face_classifier = cv2.CascadeClassifier("./classifiers/frontalface_classifier.xml")
-        self.confirmation_threshold = 10  # Number of consecutive detections required to confirm presence
+        self.confirmation_threshold = 15  # Number of consecutive detections required to confirm presence
         self.confirmed_person_id = None
         self.consecutive_detections = 0
+
 
     def detect_faces(self, image):
         # Detects faces in an image and returns the coordinates of the rectangles enclosing them
@@ -54,7 +56,7 @@ class FaceDetector:
         faces = self.face_classifier.detectMultiScale(gray_image, 1.2, 5)
         return faces
     
-    def live_comparison(self, encodings_dict, kivy_camera):
+    def live_comparison(self, encodings_list, kivy_camera):
 
         # Convert kivy camera into compatible cv2 format
         frame = kivy_to_cv2(kivy_camera)
@@ -78,7 +80,7 @@ class FaceDetector:
                     found_encoding = face_recognition.face_encodings(face, known_face_locations=[(0, w, h, 0)])[0]
 
                     # Identify person based on the encoding found
-                    person_found, color = self.identify_person(encodings_dict, found_encoding, person_found)
+                    person_found, color = self.identify_person(encodings_list, found_encoding, person_found)
                     self.draw_info(frame, x, y, w, h, person_found, color)
                     
                     # Confirm presence in Excel spreadsheet
@@ -106,20 +108,27 @@ class FaceDetector:
             return image_texture, person_found, self.consecutive_detections, self.confirmation_threshold
 
 
-    def identify_person(self, encodings_dict, actual_encoding, person_found):
-        color = (0, 0, 250)  # Red
+    def identify_person(self, encodings_list, actual_encoding, person_found):
+        """ Compare detected face encodings with the list of encodings for each person in the database """
+        color = (0, 0, 250) 
         
-        # Compare detected face encodings with the list of encodings for each person in the database
-        for key in encodings_dict:
-            result = face_recognition.compare_faces(encodings_dict[key], actual_encoding)
+        # Iterate over the list of tuples (student_id, encoding)
+        for student_id, encoding in encodings_list:
+            encoding = np.fromstring(encoding, dtype=np.float64) # Convert to numpy array
+            result = face_recognition.compare_faces([encoding], actual_encoding)
             if True in result:
-                person_found["id"] = key
-                result = db_manager.cursor.execute("SELECT student_id, full_name, grade FROM encodings WHERE student_id = ?", (person_found["id"],)).fetchone()
-                person_found["name"] = result["full_name"]
-                person_found["grade"] = result["grade"]
-                color = (125, 220, 0) 
-             
+                person_found["id"] = student_id
+                result = db_manager.cursor.execute(
+                    "SELECT student_id, full_name, grade FROM encodings WHERE student_id = ?", 
+                    (person_found["id"],)
+                ).fetchone()
+                if result:
+                    person_found["name"] = result[1]
+                    person_found["grade"] = result[2]
+                    color = (125, 220, 0)  # Green
+                
         return person_found, color
+
     
     def draw_info(self, frame, x, y, w, h, person_found, color):
         cv2.rectangle(frame, (x, y + h), (x + w, y + h + 50), color, -1)  # Bottom rectangle
@@ -156,7 +165,7 @@ class PhotoCapturer:
         # Capture photos from the camera with face detector display
 
         self.photo_count = photo_count
-        self.photo_threshold = 10
+        self.photo_threshold = 250
         self.brightness = None
         self.brightness_threshold = 100
         face_detected = False
